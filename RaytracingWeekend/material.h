@@ -43,7 +43,7 @@ public:
 
 class dielectric : public material {
 public:
-	dielectric(const color& a, double refractive_index) : albedo(a), ir(refractive_index) {}
+	dielectric(const color& a, double refractive_index, double blur=0.) : albedo(a), ir(refractive_index), blur(fabs(blur) < 1 ? blur : 1) {}
 	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
 		double refraction_ratio = rec.front_face ? (1 / ir) : ir;
 
@@ -58,14 +58,17 @@ public:
 		}
 		else {
 			direction = refract(in_vec, rec.normal, refraction_ratio);
+			if (blur > 0)
+				direction += random() * blur;
 		}
+		attenuation = albedo;
 
 		scattered = ray(rec.p, direction);
-		attenuation = albedo;
 		return true;
 	}
 	color albedo;
 	double ir; //refractive index
+	double blur;
 private:
 	static double reflectance(double cosine, double ref_idx) {
 		//Schlicks approximation
