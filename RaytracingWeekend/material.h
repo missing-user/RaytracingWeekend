@@ -43,9 +43,11 @@ public:
 
 class dielectric : public material {
 public:
-	dielectric(const color& a, double refractive_index, double blur=0.) : albedo(a), ir(refractive_index), blur(fabs(blur) < 1 ? blur : 1) {}
+	dielectric(const color& a, double refractive_index, double blur=0.) : albedo(a), ri(refractive_index), blur(fabs(blur) < 1 ? blur : 1) {}
 	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
-		double refraction_ratio = rec.front_face ? (1 / ir) : ir;
+		
+		double r_index = ri_at_lambda(ri, dispersion, r_in.lambda());
+		double refraction_ratio = rec.front_face ? (1. / r_index) : r_index;
 
 		auto in_vec = unit_vector(r_in.direction());
 		auto cos_theta = fmin(dot(-in_vec, rec.normal), 1);
@@ -67,13 +69,18 @@ public:
 		return true;
 	}
 	color albedo;
-	double ir; //refractive index
+	double ri; //refractive index
 	double blur;
+	double dispersion = 0.044;
 private:
 	static double reflectance(double cosine, double ref_idx) {
 		//Schlicks approximation
 		auto r0 = (1 - ref_idx) / (1 + ref_idx);
 		r0 = r0 * r0;
 		return r0 + (1 - r0) * pow((1 - cosine), 5);
+	}
+
+	static double ri_at_lambda(double ri, double disp, double wavelength) {
+		return ri + (disp / wavelength);
 	}
 };

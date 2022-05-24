@@ -44,13 +44,16 @@
     <ClInclude Include="camera.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="RaytracingWeekend.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
     <ClInclude Include="material.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="scene_generation.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="preview_gui.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="raytracer.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

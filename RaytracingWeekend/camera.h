@@ -6,10 +6,10 @@ class camera {
 public:
     camera(point3 lookfrom, point3 lookat, vec3 vup,
         double vfov, //vertical fov in degrees
-        double aspect,
         double aperture,
-        double focus_dist
-        ) 
+        double focus_dist,
+        const int horizontal_resolution
+        ) : image_width(horizontal_resolution), image_height(static_cast<int>(horizontal_resolution / aspect_ratio))
      {
         //Camera orientation
         w = unit_vector(lookfrom - lookat);
@@ -19,14 +19,10 @@ public:
         //Camera Projection Plane
         auto theta = degrees_to_radians(vfov);
         auto h = tan(theta / 2);
-        double viewport_height = 2.0*h;
-        double viewport_width = viewport_height * aspect;
+        const double viewport_height = 2.0*h;
+        const double viewport_width = viewport_height * aspect_ratio;
 
         lens_radius = aperture / 2;
-
-        //Image
-        image_width = 500;
-        image_height = static_cast<int>(image_width / aspect);
 
         origin = lookfrom;
         horizontal = focus_dist*viewport_width * u;
@@ -47,6 +43,7 @@ private:
     double lens_radius;
     point3 left_corner;
 public:
-    int image_width;
-    int image_height;
+    //Image
+    const int image_width;
+    const int image_height;
 };
