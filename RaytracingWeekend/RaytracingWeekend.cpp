@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
     camera cam(lookfrom, lookat, vup, 20, aperture, dist_to_focus, 720);
 
     //Render
-    threaded_renderer renderer(cam.image_width, cam.image_height, 64, 100, 50);
+    threaded_renderer renderer(cam.image_width, cam.image_height, 32, 100, 50);
     preview_gui gui(filename, cam.image_width, cam.image_height);
 
     std::cerr << "Initializing Scene" << std::endl;
