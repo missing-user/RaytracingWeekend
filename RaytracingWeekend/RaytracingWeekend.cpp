@@ -14,7 +14,7 @@
 #include "material.h"
 
 std::string get_filename(int argc, char* argv[], std::string file_ending,bool append_time) {
-    std::string cmd;
+    std::string cmd = "out";
     for (int i = 0; i < argc; ++i)
     {
         cmd = argv[i];
@@ -37,6 +37,7 @@ std::string get_filename(int argc, char* argv[], std::string file_ending,bool ap
 
 int main(int argc, char* argv[])
 {
+    auto start = std::chrono::high_resolution_clock::now();
     std::cerr << "Initializing Renderer" << std::endl;
 
     //Camera Settings
@@ -60,6 +61,8 @@ int main(int argc, char* argv[])
     hittable_list world = random_scene();
     renderer.render(world, cam);
     gui.open_gui(renderer);
+    const auto elapsed = std::chrono::high_resolution_clock::now() - start;
+    std::cerr<<"Render took: " << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count() << "ms " << std::endl;
         
     std::cerr << "Done";
 }

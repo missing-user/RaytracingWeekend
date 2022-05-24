@@ -2,7 +2,6 @@
 
 #include <SFML/Graphics.hpp>
 #include <iostream>
-#include <thread>
 
 #include "rtweekend.h"
 #include "raytracer.h"

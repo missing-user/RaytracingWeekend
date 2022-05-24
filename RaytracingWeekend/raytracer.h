@@ -1,7 +1,6 @@
 #pragma once
 
 #include <thread>
-#include <ctime>
 
 #include "rtweekend.h"
 #include "hittable_list.h"
