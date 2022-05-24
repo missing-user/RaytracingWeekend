@@ -53,6 +53,8 @@ void threaded_render(std::vector<color>& output, hittable_list& world, int sampl
 
 int main()
 {
+
+    auto start = std::chrono::high_resolution_clock::now();
     //Camera Settings
     point3 lookfrom(13, 2, 3);
     point3 lookat(0, 0, 0);
@@ -64,9 +66,9 @@ int main()
 
     //Render Settings
     const std::string filename = "render.ppm";
-    int sample_count = 50;
-    int max_depth = 20;
-    const int num_threads = 8;
+    int sample_count = 100;
+    int max_depth = 50;
+    const int num_threads = 16;
 
     // World
     hittable_list world = random_scene();
@@ -93,6 +95,8 @@ int main()
     {
        threads[i].join();
     }
+    const auto elapsed = std::chrono::high_resolution_clock::now() - start;
+    std::cerr << "Render took: " << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count() << "ms " << std::endl;
 
     std::cerr << "\nCollecting threads\n";
     for (int j = 0; j < cam.image_height*cam.image_width; ++j)
@@ -104,6 +108,9 @@ int main()
         }
         write_color(output_file, tmp_color / num_threads);
     }
+
+    const auto elapsed2 = std::chrono::high_resolution_clock::now() - start;
+    std::cerr << "Render + file write took: " << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed2).count() << "ms " << std::endl;
         
     std::cerr << "\nDone";
 }

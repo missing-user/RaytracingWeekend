@@ -25,7 +25,7 @@ public:
         lens_radius = aperture / 2;
 
         //Image
-        image_width = 500;
+        image_width = 720;
         image_height = static_cast<int>(image_width / aspect);
 
         origin = lookfrom;
