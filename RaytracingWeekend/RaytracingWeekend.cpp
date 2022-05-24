@@ -40,6 +40,9 @@ int main(int argc, char* argv[])
     auto start = std::chrono::high_resolution_clock::now();
     std::cerr << "Initializing Renderer" << std::endl;
 
+    //Render Settings
+    const std::string filename = get_filename(argc, argv, ".png", true);
+
     //Camera Settings
     point3 lookfrom(13, 2, 3);
     point3 lookat(0, 0, 0);
@@ -49,16 +52,13 @@ int main(int argc, char* argv[])
 
     camera cam(lookfrom, lookat, vup, 20, aperture, dist_to_focus, 720);
 
-    //Render Settings
-    const std::string filename = get_filename(argc, argv, ".png", true);
-
     //Render
     threaded_renderer renderer(cam.image_width, cam.image_height, 64, 100, 50);
     preview_gui gui(filename, cam.image_width, cam.image_height);
 
     std::cerr << "Initializing Scene" << std::endl;
     // World
-    hittable_list world = random_disp();
+    hittable_list world = random_scene();
     renderer.render(world, cam);
     gui.open_gui(renderer);
     const auto elapsed = std::chrono::high_resolution_clock::now() - start;

@@ -6,6 +6,21 @@
 #include "sphere.h"
 
 hittable_list random_scene() {
+    /*
+    
+    //Camera Settings
+    point3 lookfrom(13, 2, 3);
+    point3 lookat(0, 0, 0);
+    vec3 vup(0, 1, 0);
+    double dist_to_focus = 10.0;
+    auto aperture = 0.1;
+
+    camera cam(lookfrom, lookat, vup, 20, aperture, dist_to_focus, 720);
+
+    //Render
+    threaded_renderer renderer(cam.image_width, cam.image_height, 64, 100, 50);
+
+    */
     hittable_list world;
 
     auto ground_material = make_shared<lambertian>(color(0.5, 0.5, 0.5));

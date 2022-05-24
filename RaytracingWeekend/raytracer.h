@@ -48,11 +48,18 @@ static void render_tile(std::vector<color>& output, hittable& world, int sample_
                 ray r = cam.get_ray(u, v);
                 //pixel_color += ray_color(r, world, max_depth);
 
-                for (int lambda = 0; lambda < 34; lambda++)
+                const int dispersion_steps = 9;
+                for (int lambda = 0; lambda < 3; lambda++)
                 {
                     //r.wavelength = random_double(380, 720);
-                    r.wavelength = 380 + lambda * 10;
-                    pixel_color += ray_color(r, world, max_depth) * wavelength_to_color(r.wavelength)/8;
+                    color disp_color = color(0, 0, 1);
+                    r.wavelength = 380 + lambda * 340/dispersion_steps;
+                    if(lambda == 1)
+                        disp_color= color(0, 1, 0);
+                    else if(lambda == 2)
+                        disp_color = color(1, 0, 0);
+                    
+                    pixel_color += ray_color(r, world, max_depth) * disp_color;
                 }
             }
             output[j * cam.image_width + i] += (pixel_color / sample_count);

@@ -71,7 +71,7 @@ public:
 	color albedo;
 	double ri; // refractive index
 	double blur;
-	double dispersion = 0.044*1e3; // dispersion coefficient in micrometers
+	double dispersion = 0.044*1e4; // dispersion coefficient in micrometers
 private:
 	static double reflectance(double cosine, double ref_idx) {
 		//Schlicks approximation
