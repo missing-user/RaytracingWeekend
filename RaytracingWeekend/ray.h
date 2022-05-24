@@ -4,7 +4,7 @@
 class ray {
 public:
 	ray() {}
-	ray(const point3& origin, const vec3 direction) : orig(origin), dir(direction), wavelength(0){}
+	ray(const point3& origin, const vec3 direction) : orig(origin), dir(direction), wavelength(600){}
 	ray(const point3& origin, const vec3 direction, double wavelength) : orig(origin), dir(direction), wavelength(wavelength) {}
 
 	point3 orgin() const { return orig; }

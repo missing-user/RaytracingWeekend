@@ -6,6 +6,7 @@
 #include "hittable_list.h"
 #include "camera.h"
 #include "material.h"
+#include "color.h"
 
 
 struct tile {
@@ -45,7 +46,14 @@ static void render_tile(std::vector<color>& output, hittable& world, int sample_
                 double v = (j + random_double()) / (cam.image_height - 1.);
 
                 ray r = cam.get_ray(u, v);
-                pixel_color += ray_color(r, world, max_depth);
+                //pixel_color += ray_color(r, world, max_depth);
+
+                for (int lambda = 0; lambda < 34; lambda++)
+                {
+                    //r.wavelength = random_double(380, 720);
+                    r.wavelength = 380 + lambda * 10;
+                    pixel_color += ray_color(r, world, max_depth) * wavelength_to_color(r.wavelength)/8;
+                }
             }
             output[j * cam.image_width + i] += (pixel_color / sample_count);
         }

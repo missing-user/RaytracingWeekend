@@ -18,7 +18,7 @@ public:
 
 		if (scatter_direction.near_zero()) scatter_direction = rec.normal;
 
-		scattered = ray(rec.p, scatter_direction);
+		scattered = ray(rec.p, scatter_direction, r_in.wavelength);
 		attenuation = albedo;
 		return true;
 	}
@@ -33,7 +33,7 @@ public:
 	metal(const color & a, double f): albedo(a), fuzz(f< 1? f:1){}
 	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
 		vec3 reflected = reflect(unit_vector(r_in.direction()), rec.normal);
-		scattered = ray(rec.p, reflected + fuzz * random_in_unit_sphere());
+		scattered = ray(rec.p, reflected + fuzz * random_in_unit_sphere(), r_in.wavelength);
 		attenuation = albedo;
 		return dot(scattered.direction(), rec.normal) > 0;
 	}
@@ -65,13 +65,13 @@ public:
 		}
 		attenuation = albedo;
 
-		scattered = ray(rec.p, direction);
+		scattered = ray(rec.p, direction, r_in.wavelength);
 		return true;
 	}
 	color albedo;
-	double ri; //refractive index
+	double ri; // refractive index
 	double blur;
-	double dispersion = 0.044;
+	double dispersion = 0.044*1e3; // dispersion coefficient in micrometers
 private:
 	static double reflectance(double cosine, double ref_idx) {
 		//Schlicks approximation

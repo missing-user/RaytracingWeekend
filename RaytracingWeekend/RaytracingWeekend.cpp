@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
 
     std::cerr << "Initializing Scene" << std::endl;
     // World
-    hittable_list world = random_scene();
+    hittable_list world = random_disp();
     renderer.render(world, cam);
     gui.open_gui(renderer);
     const auto elapsed = std::chrono::high_resolution_clock::now() - start;
