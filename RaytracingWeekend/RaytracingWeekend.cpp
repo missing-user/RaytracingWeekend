@@ -15,20 +15,10 @@
 
 std::string get_filename(int argc, char* argv[], std::string file_ending,bool append_time) {
     std::string cmd = "out";
-    for (int i = 0; i < argc; ++i)
+    for (int i = 1; i < argc; ++i)
     {
         cmd = argv[i];
     }
-
-    /*if (append_time) {
-        std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-        time_t now_c = std::chrono::system_clock::to_time_t(now);
-        tm *now_tm;
-        localtime_s(now_tm, &now_c);
-        char buffer[80];
-        strftime(buffer, sizeof(buffer), "%d-%m/%H:%M:%S", now_tm);
-        cmd += buffer;
-    }*/
     cmd += file_ending;
 
     return cmd;
@@ -57,12 +47,15 @@ int main(int argc, char* argv[])
     preview_gui gui(filename, cam.image_width, cam.image_height);
 
     std::cerr << "Initializing Scene" << std::endl;
+
     // World
-    hittable_list world = random_scene();
+    hittable_list world = random_disp();
+
+    std::cerr << "Starting Render" << std::endl;
     renderer.render(world, cam);
     gui.open_gui(renderer);
     const auto elapsed = std::chrono::high_resolution_clock::now() - start;
-    std::cerr<<"Render took: " << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count() << "ms " << std::endl;
-        
+
+    std::cerr<<"Render took: " << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count() << "ms " << std::endl;  
     std::cerr << "Done";
 }

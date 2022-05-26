@@ -13,6 +13,7 @@ using std::sqrt;
 const double infinity = std::numeric_limits<double>::infinity();
 const double pi = 3.1415926535897932385;
 const double aspect_ratio = 16.0 / 9.0;
+const double white_wavelength = 550.;
 
 // Utility Functions
 inline double degrees_to_radians(double degrees) {

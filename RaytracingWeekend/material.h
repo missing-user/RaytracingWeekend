@@ -6,7 +6,8 @@ struct hit_record;
 
 class material {
 public:
-	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const = 0;
+	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const = 0; 
+	virtual color emitted(const point3& p) const {return color(0, 0, 0);}
 };
 
 class lambertian : public material {
@@ -27,6 +28,23 @@ private:
 	color albedo;
 };
 
+class diffuse_light : public material {
+public:
+	diffuse_light(color c) : emit(c) {}
+
+	virtual bool scatter(
+		const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered
+	) const override {
+		return false;
+	}
+
+	virtual color emitted(const point3& p) const override {
+		return emit;
+	}
+
+public:
+	color emit;
+};
 
 class metal : public material {
 public:
@@ -60,18 +78,17 @@ public:
 		}
 		else {
 			direction = refract(in_vec, rec.normal, refraction_ratio);
-			if (blur > 0)
-				direction += random() * blur;
+			//if (blur > 0)
+			direction += random() * blur;
 		}
 		attenuation = albedo;
-
 		scattered = ray(rec.p, direction, r_in.wavelength);
 		return true;
 	}
 	color albedo;
 	double ri; // refractive index
 	double blur;
-	double dispersion = 0.044*1e4; // dispersion coefficient in micrometers
+	double dispersion = 0.044*1e3; // dispersion coefficient in nanometers
 private:
 	static double reflectance(double cosine, double ref_idx) {
 		//Schlicks approximation

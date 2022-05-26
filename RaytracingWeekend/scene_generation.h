@@ -109,18 +109,18 @@ hittable_list random_disp() {
         }
     }
 
-    auto material1 = make_shared<dielectric>(color(1,1,1), 1.5);
-    world.add(make_shared<sphere>(point3(0, 1, 0), 1.0, material1));
+    auto material2 = make_shared<diffuse_light>(color(6,6,6));
+    world.add(make_shared<sphere>(point3(0, 1, 0), 1.0, material2));
 
-
-    auto material2 = make_shared<lambertian>(color(3,3,3));
-    world.add(make_shared<sphere>(point3(-4, 1, 0), 1.0, material2));
+    auto material1 = make_shared<lambertian>(color(.9, 1, 1));
+    world.add(make_shared<sphere>(point3(4, 1, 0), 1.0, material1));
 
     auto material3 = make_shared<metal>(color(1,1,1), 0.0);
-    world.add(make_shared<sphere>(point3(4, 1, 0), 1.0, material3));
+    world.add(make_shared<sphere>(point3(-4, 1, 0), 1.0, material3));
 
     auto material4 = make_shared<dielectric>(color(1, 1, 1), 1.5);
     world.add(make_shared<sphere>(point3(0, 1, 3), 1.0, material4));
+
 
     return world;
 }
