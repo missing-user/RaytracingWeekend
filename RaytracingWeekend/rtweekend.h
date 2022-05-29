@@ -16,11 +16,11 @@ const double aspect_ratio = 16.0 / 9.0;
 const double white_wavelength = 550.;
 
 // Utility Functions
-inline double degrees_to_radians(double degrees) {
+inline double degrees_to_radians(const double degrees) {
     return degrees * pi / 180.0;
 }
 
-inline double clamp(double x, double min=0, double max=1) {
+inline double clamp(const double x, const double min=0, const double max=1) {
     if (x > max)
         return max;
     else if (x < min)
@@ -28,10 +28,10 @@ inline double clamp(double x, double min=0, double max=1) {
     return x;
 }
 
-inline double random_double(double min = 0, double max = 1) {
-    static std::uniform_real_distribution<double> distribution(0.0, 1);
+inline double random_double(const double min = 0, const double max = 1) {
+    static std::uniform_real_distribution<double> distribution(min, max);
     static std::mt19937 generator;
-    return distribution(generator) * (max - min) + min;
+    return distribution(generator);
 }
 
 // Common Headers
