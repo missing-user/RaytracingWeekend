@@ -9,8 +9,8 @@
 #include "material.h"
 #include "color.h"
 
-const bool DEBUG_DEPTH = false;
-const bool DISPERSION = true;
+//#define DEBUG_DEPTH
+//#define DISPERSION
 
 struct tile {
     const int x, y, x_end, y_end;
@@ -30,23 +30,30 @@ static color ray_color(const ray& r, const hittable& h, int depth) {
         color attenuation;
         color emitted = rec.mat_ptr->emitted(rec.p);
 
-        if (DISPERSION && std::dynamic_pointer_cast<dielectric>(rec.mat_ptr) && r.lambda() == white_wavelength) {
+        #ifdef DISPERSION
+        if (std::dynamic_pointer_cast<dielectric>(rec.mat_ptr) && r.lambda() == white_wavelength) {
             return  emitted + dispersed_ray_color(rec, r, h, depth-1);
-        }else if (rec.mat_ptr->scatter(r, rec, attenuation, scattered)){
-            if (DEBUG_DEPTH)
-                attenuation = color(1, 1, 1);
+        }else
+        #endif
+
+        if (rec.mat_ptr->scatter(r, rec, attenuation, scattered)){
+            #ifdef DEBUG_DEPTH
+            attenuation = color(1, 1, 1);
+            #endif
             return emitted + ray_color(scattered, h, depth - 1) * attenuation;
         }
-        return DEBUG_DEPTH ? color(depth, depth, depth): emitted;
+        #ifndef DEBUG_DEPTH
+        return emitted;
+        #endif
     }
+
+    #ifdef DEBUG_DEPTH
+    return color(depth, depth, depth);
+    #endif
 
     vec3 unit_direction = unit_vector(r.direction());
     auto t = 0.5 * (unit_direction.y() + 1.0);
-    if (DEBUG_DEPTH)
-        return color(depth, depth, depth);
-    else
-        //return color();
-        return (1.0 - t) * color(1.0, 1.0, 1.0) + t * color(0.5, 0.7, 1.0);
+    return (1.0 - t) * color(1.0, 1.0, 1.0) + t * color(0.5, 0.7, 1.0); // sky color
 }
 
 static color dispersed_ray_color(const hit_record& rec, const ray& r, const hittable& h, int depth) {
@@ -63,8 +70,9 @@ static color dispersed_ray_color(const hit_record& rec, const ray& r, const hitt
             else if (lambda == 2)
                 disp_color = color(1, 0, 0);
 
-            if (DEBUG_DEPTH)
-                attenuation = color(1, 1, 1);
+            #ifdef DEBUG_DEPTH
+            attenuation = color(1, 1, 1);
+            #endif
 
             tmp_ray_col += ray_color(scattered, h, depth - 1) * attenuation * disp_color;
         }
@@ -87,10 +95,11 @@ static void render_tile(std::vector<color>& output, hittable& world, const int s
                 double v = (j + random_double()) / (cam.image_height - 1.);
 
                 ray r = cam.get_ray(u, v);
-                if(DEBUG_DEPTH)
+                #ifdef DEBUG_DEPTH
                     pixel_color += color(1, 1, 1) - (ray_color(r, world, max_depth) / max_depth);
-                else
+                #else
                     pixel_color += ray_color(r, world, max_depth);
+                #endif
             }
             output[j * cam.image_width + i] = (pixel_color / sample_count);
         }
