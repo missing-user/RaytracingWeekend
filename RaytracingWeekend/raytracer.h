@@ -31,7 +31,7 @@ static color ray_color(const ray& r, const hittable& h, int depth) {
         color emitted = rec.mat_ptr->emitted(rec.p);
 
         #ifdef DISPERSION
-        if (std::dynamic_pointer_cast<dielectric>(rec.mat_ptr) && r.lambda() == white_wavelength) {
+        if (dynamic_cast<dielectric*>(rec.mat_ptr) && r.lambda() == white_wavelength) {
             return  emitted + dispersed_ray_color(rec, r, h, depth-1);
         }else
         #endif
@@ -56,6 +56,7 @@ static color ray_color(const ray& r, const hittable& h, int depth) {
     return (1.0 - t) * color(1.0, 1.0, 1.0) + t * color(0.5, 0.7, 1.0); // sky color
 }
 
+#ifdef DISPERSION
 static color dispersed_ray_color(const hit_record& rec, const ray& r, const hittable& h, int depth) {
     color tmp_ray_col = color();
     for (int lambda = 0; lambda < 3; lambda++)
@@ -74,12 +75,14 @@ static color dispersed_ray_color(const hit_record& rec, const ray& r, const hitt
             attenuation = color(1, 1, 1);
             #endif
 
-            tmp_ray_col += ray_color(scattered, h, depth - 1) * attenuation * disp_color;
+            //do not decrease depth counter, as the dispersed_ray_color function only splits the ray and does not call a recursion
+            tmp_ray_col += ray_color(scattered, h, depth) * attenuation * disp_color;
         }
     }
 
     return tmp_ray_col;
 }
+#endif
 
 static void render_tile(std::vector<color>& output, hittable& world, const int sample_count, const int max_depth, camera& cam, const tile tile) {
     //for rendering a single tile on a thread
