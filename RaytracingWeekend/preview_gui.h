@@ -2,6 +2,7 @@
 
 #include <SFML/Graphics.hpp>
 #include <iostream>
+#include <iomanip>
 
 #include "rtweekend.h"
 #include "raytracer.h"
@@ -60,6 +61,8 @@ public:
             if (renderer.finished()) {
                 finished_rendering = true;
             }
+
+            std::cerr<< "\rProgress: " << std::fixed << std::setprecision(1) << renderer.get_percentage() * 100 << "% " << std::flush;
 
             sf::sleep(sf::milliseconds(500));
         }
