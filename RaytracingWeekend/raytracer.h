@@ -9,9 +9,6 @@
 #include "material.h"
 #include "color.h"
 
-//#define DEBUG_DEPTH
-//#define DISPERSION
-
 struct tile {
     const int x, y, x_end, y_end;
     tile(int x0, int y0, int width, int height) : x(x0), y(y0), x_end(x0 + width), y_end(y0 + height) {};
@@ -25,6 +22,7 @@ static color ray_color(const ray& r, const hittable& h, int depth) {
     if (depth <= 0)
         return color();
 
+    
     if (h.hit(r, 0.0001, infinity, rec)) {
         ray scattered;
         color attenuation;
@@ -51,25 +49,40 @@ static color ray_color(const ray& r, const hittable& h, int depth) {
     return color(depth, depth, depth);
     #endif
 
+    return color();
     vec3 unit_direction = unit_vector(r.direction());
     auto t = 0.5 * (unit_direction.y() + 1.0);
-    return (1.0 - t) * color(1.0, 1.0, 1.0) + t * color(0.5, 0.7, 1.0); // sky color
+    return ( (1.0 - t) * color(1.0, 1.0, 1.0) + t * color(0.5, 0.7, 1.0)); // sky color
+}
+
+static color fraction_to_color(double fraction) {
+    if (fraction < 1./3.)
+    {
+        const double f = fraction * 3;
+        return color(1-f,f,0);
+    }
+    if (fraction < 2./3.) {
+        const double f = fraction * 3 - 1;
+        return color(0, 1 - f, f);
+    }
+    const double f = fraction * 3 - 2;
+    return color(f, 0, 1-f);
 }
 
 #ifdef DISPERSION
 static color dispersed_ray_color(const hit_record& rec, const ray& r, const hittable& h, int depth) {
     color tmp_ray_col = color();
-    for (int lambda = 0; lambda < 3; lambda++)
+    const int num_disp_rays = 6;
+    for (int i = 0; i < num_disp_rays; i++)
     {
-        ray dispersed_ray = ray(r, 380. + lambda * 340. / 3.);
+        double frac = random_double();
+        double lambda = 380. + frac * 340. ;
+        ray dispersed_ray = ray(r, lambda);
+        color disp_color = fraction_to_color(fmod(frac+1.6,1));
+
         ray scattered;
         color attenuation;
         if (rec.mat_ptr->scatter(dispersed_ray, rec, attenuation, scattered)) {
-            color disp_color = color(0, 0, 1);
-            if (lambda == 1)
-                disp_color = color(0, 1, 0);
-            else if (lambda == 2)
-                disp_color = color(1, 0, 0);
 
             #ifdef DEBUG_DEPTH
             attenuation = color(1, 1, 1);
@@ -80,7 +93,7 @@ static color dispersed_ray_color(const hit_record& rec, const ray& r, const hitt
         }
     }
 
-    return tmp_ray_col;
+    return tmp_ray_col / num_disp_rays;
 }
 #endif
 
@@ -154,6 +167,10 @@ public:
         num_threads(std::thread::hardware_concurrency())
     {}
 
+    double get_percentage() const {
+        return tile_id / static_cast<double>(tiles.size());
+    }
+
     void render(hittable& world, camera& cam) {
         create_tiles(); // these are the jobs for the thread pool
 
@@ -162,6 +179,7 @@ public:
 
         for (int i = 0; i < std::min(num_threads, (int)tiles.size()); ++i)
         {
+            init_random();
             threads.push_back(
                 std::thread(
                     consume_tiles,
