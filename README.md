@@ -1,4 +1,5 @@
 # RaytracingWeekend
+![prism cube demo](Image_Outputs/precomputed_random512535.png)
 Implemented a basic raytracer by following the [_Ray Tracing in One Weekend_](https://raytracing.github.io/books/RayTracingInOneWeekend.html) books by Peter Shirley. 
 
 ## Improvements
@@ -12,6 +13,5 @@ My version extends the basic tracer described in Book 1 by adding a simple dispe
 5. Faster cube intersection method adapted from the [PSRaytracing repository](https://github.com/define-private-public/PSRayTracing)
 
 ## Impressions
-![prism cube demo](Image_Outputs/precomputed_random512535.png)
 ![dispersion demo](Image_Outputs/emissive_dispersive.png)
 ![emission demo](Image_Outputs/only_emissive.png)
