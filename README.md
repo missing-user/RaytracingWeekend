@@ -1,5 +1,6 @@
 # RaytracingWeekend
 ![prism cube demo](Image_Outputs/precomputed_random512535.png)
+
 Implemented a basic raytracer by following the [_Ray Tracing in One Weekend_](https://raytracing.github.io/books/RayTracingInOneWeekend.html) books by Peter Shirley. 
 
 ## Improvements
