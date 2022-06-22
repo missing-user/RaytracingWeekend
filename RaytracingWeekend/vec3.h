@@ -8,7 +8,7 @@ class vec3
 {
 public: 
 	vec3(): e{0,0,0} {}
-	vec3(double e0, double e1, double e2): e{e0,e1,e2} {}
+	vec3(double e0, double e1, double e2) : e{e0,e1,e2} {}
 
 	double x() const { return e[0]; }
 	double y() const { return e[1]; }
@@ -46,7 +46,7 @@ public:
 
 	bool near_zero() const {
 		const auto s = 1e-8;
-		return (fabs(e[0] < s)) && (fabs(e[1] < s)) && (fabs(e[2] < s));
+		return (fabs(e[0]) < s) && (fabs(e[1]) < s) && (fabs(e[2]) < s);
 	}
 
 
@@ -76,12 +76,28 @@ vec3 random_in_unit_sphere() {
 	}
 }
 
+
 vec3 random_in_unit_disk() {
 	while (true) {
 		auto p = vec3(random_double(-1, 1), random_double(-1,1), 0);
 		if (p.length() < 1)
 			return p;
 	}
+}
+
+inline vec3 vmin(const vec3& p0, const vec3& p1) {
+	return vec3(
+		fmin(p0.x(), p1.x()),
+		fmin(p0.y(), p1.y()),
+		fmin(p0.z(), p1.z()));
+}
+
+
+inline vec3 vmax(const vec3& p0, const vec3& p1) {
+	return vec3(
+		fmax(p0.x(), p1.x()),
+		fmax(p0.y(), p1.y()),
+		fmax(p0.z(), p1.z()));
 }
 
 inline vec3 operator+(const vec3& u, const vec3& v) {
