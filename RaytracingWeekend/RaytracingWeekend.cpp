@@ -41,28 +41,28 @@ int main(int argc, char* argv[])
     auto aperture = 0.2;
     double vfov = 20.;
 
-    //lookfrom = point3(478, 278, -600);
-    //lookat = point3(278, 278, 0);
-    //vfov = 40.2;
-    aperture = 0.;
+    aperture = 1.2;
+    dist_to_focus = 14.0;
 
     camera cam(lookfrom, lookat, vup, vfov, aperture, dist_to_focus, 720);
 
     //Render
-    threaded_renderer renderer(cam.image_width, cam.image_height, 32, 400, 50);
+    threaded_renderer renderer(cam.image_width, cam.image_height, 32, 100, 50);
     preview_gui gui(filename, cam.image_width, cam.image_height);
 
-    std::cerr << "Initializing Scene and building BVH" << std::endl;
+    std::cerr << "Initializing Scene" << std::endl;
 
     // World
-    hittable_list scene = prism();
-    auto bvh_scene = bvh_node(scene.objects, 0, scene.objects.size());
+    init_random();
+    hittable_list scene = horse_scene();
 
-    std::cerr << "Starting Render" << std::endl;
+    std::cerr << "Building BVH" << std::endl;
+    auto bvh_scene = bvh_node(scene);
+
+    std::cerr << "Starting Render"<< std::endl;
     renderer.render(bvh_scene, cam);
     gui.open_gui(renderer);
     const auto elapsed = std::chrono::high_resolution_clock::now() - start;
 
-    std::cerr << "Render took: " << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count()*1e-3 << "s " << std::endl;  
-    std::cerr << "Done";
+    std::cerr << std::endl << "Render took: " << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count()*1e-3 << "s " << std::endl;
 }
