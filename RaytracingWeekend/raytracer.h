@@ -8,6 +8,7 @@
 #include "camera.h"
 #include "material.h"
 #include "color.h"
+#include "sampler.h"
 
 struct tile {
     const int x, y, x_end, y_end;
@@ -23,7 +24,7 @@ static color ray_color(const ray& r, const hittable& h, int depth) {
         return color();
 
     
-    if (h.hit(r, 0.0001, infinity, rec)) {
+    if (h.hit(r, global_t_min, infinity, rec)) {
         ray scattered;
         color attenuation;
         color emitted = rec.mat_ptr->emitted(rec.p);
@@ -49,24 +50,32 @@ static color ray_color(const ray& r, const hittable& h, int depth) {
     return color(depth, depth, depth);
     #endif
 
-    return color();
+    //return color();
     vec3 unit_direction = unit_vector(r.direction());
     auto t = 0.5 * (unit_direction.y() + 1.0);
     return ( (1.0 - t) * color(1.0, 1.0, 1.0) + t * color(0.5, 0.7, 1.0)); // sky color
 }
 
 static color fraction_to_color(double fraction) {
-    if (fraction < 1./3.)
+    fraction = 1 - fraction;
+    if (fraction < .25)
     {
-        const double f = fraction * 3;
-        return color(1-f,f,0);
+        const double f = fraction*4;
+        return color(f, 0, 0);
     }
-    if (fraction < 2./3.) {
-        const double f = fraction * 3 - 1;
+    if (fraction < .5)
+    {
+        const double f = fraction * 4-1;
+        return color((1-f),f,0);
+    }
+    if (fraction < .75)
+    {
+        const double f = fraction * 4 - 2;
         return color(0, 1 - f, f);
     }
-    const double f = fraction * 3 - 2;
-    return color(f, 0, 1-f);
+
+    const double f = fraction * 4 - 3;
+    return color(0, 0, 1-f);
 }
 
 #ifdef DISPERSION
@@ -75,17 +84,38 @@ static color dispersed_ray_color(const hit_record& rec, const ray& r, const hitt
     const int num_disp_rays = 6;
     for (int i = 0; i < num_disp_rays; i++)
     {
+#ifdef DISCRETE_DISPERSION
+        double frac = (double)i/ (double)num_disp_rays;
+#else
         double frac = random_double();
-        double lambda = 380. + frac * 340. ;
+#endif 
+        double lambda = 380. + frac * 340.;
         ray dispersed_ray = ray(r, lambda);
-        color disp_color = fraction_to_color(fmod(frac+1.6,1));
+        color disp_color;
 
         ray scattered;
         color attenuation;
         if (rec.mat_ptr->scatter(dispersed_ray, rec, attenuation, scattered)) {
+#ifdef DISCRETE_DISPERSION
+            disp_color = color(0, 0, 1.5);
+            if (i == 1)
+                disp_color = color(0, .5, .5);
+            else if (i == 2)
+                disp_color = color(0, 1, 0);
+            else if (i == 3)
+                disp_color = color(.5, .5, 0);
+            else if (i == 4)
+                disp_color = color(1.5, 0, 0);
+            else if (i >= 5)
+                continue;
+#else
+            disp_color = fraction_to_color(fmod(frac + 1.6, 1));
+#endif // DISCRETE_DISPERSION
+
+
 
             #ifdef DEBUG_DEPTH
-            attenuation = color(1, 1, 1);
+                attenuation = color(1, 1, 1);
             #endif
 
             //do not decrease depth counter, as the dispersed_ray_color function only splits the ray and does not call a recursion
@@ -93,31 +123,32 @@ static color dispersed_ray_color(const hit_record& rec, const ray& r, const hitt
         }
     }
 
-    return tmp_ray_col / num_disp_rays;
+    return tmp_ray_col / num_disp_rays * 3;
 }
 #endif
 
-static void render_tile(std::vector<color>& output, hittable& world, const int sample_count, const int max_depth, camera& cam, const tile tile) {
+static void render_tile(std::vector<color>& output, const hittable& world, const unsigned int sample_count, const int max_depth, camera& cam, const tile tile) {
     //for rendering a single tile on a thread
     for (int i = tile.x_end - 1; i >= tile.x; --i)
     {
         for (int j = tile.y_end - 1; j >= tile.y; --j)
         {
             color pixel_color = color();
+            double total_weight = 0.;
 
-            for (int s = 0; s < sample_count; ++s)
+            for (unsigned int s = 0; s < sample_count; ++s)
             {
-                double u = (i + random_double()) / (cam.image_width - 1.);
-                double v = (j + random_double()) / (cam.image_height - 1.);
+                vec3 sample = sample_pixel(i, j, cam.image_width, cam.image_height, s);
+                total_weight += sample.z();
 
-                ray r = cam.get_ray(u, v);
+                ray r = cam.get_ray(sample.x(), sample.y());
                 #ifdef DEBUG_DEPTH
                     pixel_color += color(1, 1, 1) - (ray_color(r, world, max_depth) / max_depth);
                 #else
-                    pixel_color += ray_color(r, world, max_depth);
+                    pixel_color += ray_color(r, world, max_depth) * sample.z();
                 #endif
             }
-            output[j * cam.image_width + i] = (pixel_color / sample_count);
+            output[j * cam.image_width + i] = (pixel_color / total_weight);
         }
     }
 }
@@ -157,7 +188,6 @@ private:
         }
         //create the tiny remainder tile in the bottom right corner
         tiles.push_back(tile(x_tiles * tile_size, y_tiles * tile_size, width % tile_size, height % tile_size));
-    
     }
 
 public:
@@ -179,7 +209,6 @@ public:
 
         for (int i = 0; i < std::min(num_threads, (int)tiles.size()); ++i)
         {
-            init_random();
             threads.push_back(
                 std::thread(
                     consume_tiles,
