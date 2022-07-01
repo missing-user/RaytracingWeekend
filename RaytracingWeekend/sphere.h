@@ -18,8 +18,8 @@ public:
 
 bool sphere::bounding_box(aabb& output_box) const {
     output_box = aabb(
-        center - vec3(radius, radius, radius),
-        center + vec3(radius, radius, radius)
+        center - vec3(std::fabs(radius), std::fabs(radius), std::fabs(radius)),
+        center + vec3(std::fabs(radius), std::fabs(radius), std::fabs(radius))
         );
     return true;
 }
