@@ -11,7 +11,7 @@ public:
 
     inline bool hit(const ray& r, double t_min, double t_max) const {
         for (int a = 0; a < 3; a++) {
-            auto invD = 1.0 / r.direction()[a];
+            const auto invD = 1.0 / r.direction()[a];
             auto t0 = (min()[a] - r.origin()[a]) * invD;
             auto t1 = (max()[a] - r.origin()[a]) * invD;
             if (invD < 0.0)

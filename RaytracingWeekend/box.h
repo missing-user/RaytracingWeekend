@@ -145,10 +145,11 @@ public:
 
 public:
     shared_ptr<hittable> ptr;
-    double sin_theta;
-    double cos_theta;
     bool hasbox;
     aabb bbox;
+private:
+    double sin_theta;
+    double cos_theta;
 };
 
 rotate_y::rotate_y(shared_ptr<hittable> p, double angle) : ptr(p) {
