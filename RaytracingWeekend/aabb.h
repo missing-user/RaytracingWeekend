@@ -10,10 +10,11 @@ public:
 	point3 max() const { return maximum; }
 
     inline bool hit(const ray& r, double t_min, double t_max) const {
+        const vec3 orig = r.origin(); //this seems to speed up the calculation by 1-2% due to better memory locality
         for (int a = 0; a < 3; a++) {
             const auto invD = 1.0 / r.direction()[a];
-            auto t0 = (min()[a] - r.origin()[a]) * invD;
-            auto t1 = (max()[a] - r.origin()[a]) * invD;
+            auto t0 = (min()[a] - orig[a]) * invD;
+            auto t1 = (max()[a] - orig[a]) * invD;
             if (invD < 0.0)
                 std::swap(t0, t1);
             t_min = t0 > t_min ? t0 : t_min;
