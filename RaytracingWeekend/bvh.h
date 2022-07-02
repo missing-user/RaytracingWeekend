@@ -60,6 +60,19 @@ inline bool box_compare(const shared_ptr<hittable> a, const shared_ptr<hittable>
 }
 
 
+inline double pair_axis_dist(const std::pair<std::vector<shared_ptr<hittable>>::iterator, std::vector<shared_ptr<hittable>>::iterator> p, int axis) {
+    aabb box_a;
+    aabb box_b;
+    auto a = *p.first;
+    auto b = *p.second;
+
+    if (!a->bounding_box(box_a) || !b->bounding_box(box_b))
+        std::cerr << "No bounding box in bvh_node constructor.\n";
+
+    return box_b.max().e[axis] - box_a.min().e[axis];
+}
+
+
 bool box_x_compare(const shared_ptr<hittable> a, const shared_ptr<hittable> b) {
     return box_compare(a, b, 0);
 }
@@ -76,11 +89,31 @@ bvh_node::bvh_node(std::vector<shared_ptr<hittable>>& src_objects,
     size_t start, size_t end) {
     auto &objects = src_objects; // Create a modifiable array of the source scene objects
 
-    int axis = random_int(0, 2);
+
+    // select the largest axis to split the bvh
+    int axis;
+    auto minmax_x = std::minmax_element(objects.begin() + start, objects.begin() + end, box_x_compare);
+    auto minmax_y = std::minmax_element(objects.begin() + start, objects.begin() + end, box_y_compare);
+    auto minmax_z = std::minmax_element(objects.begin() + start, objects.begin() + end, box_z_compare);
+
+    if (pair_axis_dist(minmax_x, 0) > std::fmax(pair_axis_dist(minmax_y, 1), pair_axis_dist(minmax_z, 2))) {
+        axis = 0;
+    }
+    else if (pair_axis_dist(minmax_y, 1) > pair_axis_dist(minmax_z, 2)) {
+        axis = 1;
+    }
+    else if (pair_axis_dist(minmax_y, 1) < pair_axis_dist(minmax_z, 2)) {
+        axis = 2;
+    }
+    else{
+        // multiple axis have the same size, pick a random one
+        axis = random_int(0, 2);
+    }
     auto comparator = (axis == 0) ? box_x_compare
         : (axis == 1) ? box_y_compare
         : box_z_compare;
 
+    //how many objects does this node contain?
     size_t object_span = end - start;
 
     if (object_span == 1) {
