@@ -11,7 +11,7 @@ My version extends the basic tracer described in Book 1 by adding:
 4. Sampling and filtering as described in the book [Physically based rendering](https://pbr-book.org/3ed-2018/contents)
 5. Obj loading based on [this OpenGL tutorial](http://www.opengl-tutorial.org/beginners-tutorials/tutorial-7-model-loading/), slightly improved to utilize newer C++ features
 6. Directional lights (only emmit light when hit within the determined angle, e.g. to simulate lasers)
-7. EXR support using an adapted version of [mini exr](https://github.com/aras-p/miniexr)
+7. 16bit floating point EXR support (for HDR and better color depth) using an adapted version of [mini exr](https://github.com/aras-p/miniexr)
 
 ### Performance
 1. Multithreading support
