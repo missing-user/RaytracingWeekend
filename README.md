@@ -29,5 +29,5 @@ My version extends the basic tracer described in Book 1 by adding:
 ## TODO:
 - Better BVH splitting using surface area heuristics
 - Shadow rays/bidirectional raytracing
-- Sobol sampling everything
+- Sobol sampling everything for faster convergence
 - RNG object per thread for better performance
