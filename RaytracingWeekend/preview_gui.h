@@ -72,8 +72,7 @@ public:
             sf::sleep(sf::milliseconds(500));
         }
 
-        tex.copyToImage().saveToFile(filename);
-
+        tex.copyToImage().saveToFile(filename + ".png");
         std::cerr << "Saved image to "<< filename+".png" << std::endl;
 
 #ifdef EXR_SUPPORT
