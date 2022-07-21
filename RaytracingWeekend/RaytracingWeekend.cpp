@@ -13,13 +13,12 @@
 #include "camera.h"
 #include "material.h"
 
-std::string get_filename(int argc, char* argv[], std::string file_ending,bool append_time) {
+std::string get_filename(int argc, char* argv[]) {
     std::string cmd = "out";
     for (int i = 1; i < argc; ++i)
     {
         cmd = argv[i];
     }
-    cmd += file_ending;
 
     return cmd;
 }
@@ -31,7 +30,7 @@ int main(int argc, char* argv[])
     std::cerr << "Initializing Renderer" << std::endl;
 
     //Render Settings
-    const std::string filename = get_filename(argc, argv, ".png", true);
+    const std::string filename = get_filename(argc, argv);
 
     //Camera Settings
     point3 lookfrom(13, 6, 0);
@@ -41,20 +40,20 @@ int main(int argc, char* argv[])
     auto aperture = 0.2;
     double vfov = 20.;
 
-    aperture = 1.2;
-    dist_to_focus = 14.0;
+    dist_to_focus = 12.0;
+
+    auto main_rng = RNG(); //initialize a main thread RNG object
 
     camera cam(lookfrom, lookat, vup, vfov, aperture, dist_to_focus, 720);
 
     //Render
-    threaded_renderer renderer(cam.image_width, cam.image_height, 32, 100, 50);
+    threaded_renderer renderer(cam.image_width, cam.image_height, 32, 2000, 50);
     preview_gui gui(filename, cam.image_width, cam.image_height);
 
     std::cerr << "Initializing Scene" << std::endl;
 
     // World
-    init_random();
-    hittable_list scene = horse_scene();
+    hittable_list scene = glass_box_and_sphere();
 
     std::cerr << "Building BVH" << std::endl;
     auto bvh_scene = bvh_node(scene);

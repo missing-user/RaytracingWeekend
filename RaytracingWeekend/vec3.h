@@ -64,27 +64,6 @@ inline std::ostream& operator<<(std::ostream& out, const vec3& v) {
 	return out << v[0] << ' ' << v[1] << ' ' << v[2];
 }
 
-inline static vec3 random(double min=0, double max=1) {
-	return vec3(random_double(min, max), random_double(min, max), random_double(min, max));
-}
-
-vec3 random_in_unit_sphere() {
-	while (true) {
-		auto p = random(-1,1);
-		if (p.length() < 1)
-			return p;
-	}
-}
-
-
-vec3 random_in_unit_disk() {
-	while (true) {
-		auto p = vec3(random_double(-1, 1), random_double(-1,1), 0);
-		if (p.length() < 1)
-			return p;
-	}
-}
-
 inline vec3 vmin(const vec3& p0, const vec3& p1) {
 	return vec3(
 		fmin(p0.x(), p1.x()),
@@ -142,10 +121,6 @@ inline vec3 cross(const vec3& u, const vec3& v) {
 
 inline vec3 unit_vector(vec3 v) {
 	return v / v.length();
-}
-
-vec3 random_unit_vector() {
-	return unit_vector(random_in_unit_sphere());
 }
 
 vec3 reflect(const vec3& v, const vec3& n) {

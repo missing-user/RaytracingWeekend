@@ -1,15 +1,21 @@
 #pragma once
 
 #include <memory>
-#include <random>
-#include "pcg_random.hpp"
-#include "pcg_extras.hpp"
-#include "pcg_uint128.hpp"
+#include "prng.h"
+#include "vec3.h"
+#include "ray.h"
 
-
+#define EXR_SUPPORT
 //#define DEBUG_DEPTH
-//#define DISPERSION
-//#define DISCRETE_DISPERSION
+#define DISPERSION
+#define DISCRETE_DISPERSION
+
+#define RANDOM_PRECALC_SHUFFLED random_values[random_index++ & (precompute_num-1)]
+#define RANDOM_PRECALC_MOD random_values[prng() & (precompute_num - 1)]
+#define RANDOM_32BIT static_cast<double>(prng.randf())
+#define RANDOM_64BIT prng.rand()
+
+#define RANDOM RANDOM_64BIT //select the active random
 
 // Usings
 using std::shared_ptr;
@@ -36,50 +42,68 @@ inline double clamp(const double x, const double min=0, const double max=1) {
     return x;
 }
 
-//pcg random
-static pcg32_fast pcg_generator;
-const int precompute_num = 16777216; //16mio random numbers should be enough... right?
-double random_values[precompute_num];
-std::atomic_uint random_index = 0; //This is a uint so it overflows to 0 instead of a negative number. Otherwise more expensive checks would be needed
-
-//book random
-static std::mt19937 twister_generator;
-static std::uniform_real_distribution<double> distribution;
-static std::normal_distribution<double> normal_distribution{0., .2}; //normal distribution approximately between -.5 and .5
-
-void init_random() {
-    pcg_extras::seed_seq_from<std::random_device> seed_source;
-    for (size_t i = 0; i < precompute_num; i++)
-    {
-        random_values[i] = distribution(pcg_generator);
+class RNG {
+public:
+    RNG() : random_index(0) {
+        prng = smallprng::knuth_lcg();
+        init_random();
     }
-}
 
-inline double random_normal_double() {
-    return normal_distribution(twister_generator);
-}
+    static int random_int(const int min, const int max) {
+        auto tmpprng = smallprng::knuth_lcg();
+        return (tmpprng() % (max - min)) + min;
+    }
 
-inline double random_double() {
-    /*
-    return distribution(pcg_generator); //84s
-    return distribution(twister_generator); //67s vs original 70s when creating a new distribution every frame
-    return random_values[rng(precompute_num)]; //75s
-    return random_values[random_index++ % precompute_num]; //29s
-    */
-    return random_values[random_index++ % precompute_num]; //29s
-}
+    double random_normal_double() {
+        return prng.rand_normal(0., .2);
+        //return prng.rand_normal();
+    }
 
-inline double random_double(const double min, const double max) {
-    //std::uniform_real_distribution<double> range_distribution(min, max);
-    //return range_distribution(pcg_generator);
-    return random_double() * (max - min) + min;
-}
+    double random_double() {
+        return RANDOM;
+    }
 
-inline int random_int(int min, int max) {
-    // Returns a random integer in [min,max].
-    return static_cast<int>(random_double(min, max + 1));
-}
-// Common Headers
+    double random_double(const double min, const double max) {
+        return RANDOM * (max - min) + min;
+    }
 
-#include "ray.h"
-#include "vec3.h"
+    vec3 random() {
+        return vec3(random_double(), random_double(), random_double());
+    }
+
+    vec3 random(double min, double max) {
+        return vec3(random_double(min, max), random_double(min, max), random_double(min, max));
+    }
+
+    vec3 random_in_unit_sphere() {
+        while (true) {
+            auto p = random(-1, 1);
+            if (p.length() < 1)
+                return p;
+        }
+    }
+
+    vec3 random_in_unit_disk() {
+        while (true) {
+            auto p = vec3(random_double(-1, 1), random_double(-1, 1), 0);
+            if (p.length() < 1)
+                return p;
+        }
+    }
+
+    vec3 random_unit_vector() {
+        return unit_vector(random_in_unit_sphere());
+    }
+private:
+    void init_random() {
+        for (size_t i = 0; i < precompute_num; i++)
+        {
+            random_values[i] = prng.rand();
+        }
+    }
+private:
+    static const unsigned int precompute_num = 1 << 12;
+    double random_values[precompute_num];
+    unsigned int random_index; //This is a uint so it overflows to 0 instead of a negative number. Otherwise more expensive checks would be needed
+    smallprng::knuth_lcg prng;
+};

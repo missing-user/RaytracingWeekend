@@ -7,6 +7,11 @@
 #include "rtweekend.h"
 #include "raytracer.h"
 
+#ifdef EXR_SUPPORT
+#include "exr_writer.h"
+#endif // EXR_SUPPORT
+
+
 class preview_gui {
 public:
     preview_gui(std::string filename, const int width, const int height) : filename(filename), width(width), height(height) {};
@@ -68,7 +73,13 @@ public:
         }
 
         tex.copyToImage().saveToFile(filename);
-        std::cerr << "Saved image to "<< filename << std::endl;
+
+        std::cerr << "Saved image to "<< filename+".png" << std::endl;
+
+#ifdef EXR_SUPPORT
+        const std::string exr_path = filename + ".exr";
+        write_exr_file(exr_path.c_str(), width, height, renderer.pixels);
+#endif // EXR_SUPPORT
 
         return 0;
     }

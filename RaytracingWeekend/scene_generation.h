@@ -10,9 +10,11 @@
 #include "obj_reader.h"
 
 #include "bvh.h"
+#include "fog.h"
 
 
 hittable_list random_scene() {
+    auto rng = RNG();
     /*
     
     //Camera Settings
@@ -35,22 +37,22 @@ hittable_list random_scene() {
 
     for (int a = -11; a < 11; a++) {
         for (int b = -11; b < 11; b++) {
-            auto choose_mat = random_double();
-            point3 center(a + 0.9 * random_double(), 0.2, b + 0.9 * random_double());
+            auto choose_mat = rng.random_double();
+            point3 center(a + 0.9 * rng.random_double(), 0.2, b + 0.9 * rng.random_double());
 
             if ((center - point3(4, 0.2, 0)).length() > 0.9) {
                 shared_ptr<material> sphere_material;
 
                 if (choose_mat < 0.8) {
                     // diffuse
-                    auto albedo = random() * random();
+                    auto albedo = rng.random() * rng.random();
                     sphere_material = make_shared<lambertian>(albedo);
                     world.add(make_shared<sphere>(center, 0.2, sphere_material));
                 }
                 else if (choose_mat < 0.95) {
                     // metal
-                    auto albedo = random(0.5, 1);
-                    auto fuzz = random_double(0, 0.5);
+                    auto albedo = rng.random(0.5, 1);
+                    auto fuzz = rng.random_double(0, 0.5);
                     sphere_material = make_shared<metal>(albedo, fuzz);
                     world.add(make_shared<sphere>(center, 0.2, sphere_material));
                 }
@@ -88,24 +90,47 @@ hittable_list glass_box_and_sphere() {
     world.add(make_shared<sphere>(point3(0, -1000, 0), 1000, ground_material));
 
 
-    auto prismGlass = make_shared<dielectric>(color(1,1,1), 1.4, 0, 700);
+    auto prismGlass = make_shared<dielectric>(color(1,1,1), 1.45, 0, 0.044 * 1e4);
     world.add(make_shared<sphere>(point3(1.5, .6, -1.6), .6, prismGlass));
-
 
 
     auto difflight = make_shared<diffuse_light>(color(20, 20, 20));
     world.add(make_shared<xy_rect>(1.2, 1.8, -1, 2, -.1, difflight));
     world.add(make_shared<sphere>(point3(-2, .2, 1.2), .1, difflight));
 
-    auto green = make_shared<lambertian>(color(1, 1, 1));
+    auto gray = make_shared<lambertian>(color(1, 1, 1));
 
-    world.add(make_shared<box>(point3(0, -1, -1), point3(1.3, 1.8, 1), green));
-    world.add(make_shared<box>(point3(1.7, -1, -1), point3(2, 1.8, 1), green));
+    world.add(make_shared<box>(point3(0, -1, -1), point3(1.3, 1.8, 1), gray));
+    world.add(make_shared<box>(point3(1.7, -1, -1), point3(2, 1.8, 1), gray));
 
 
     auto box2 = make_shared<box>(point3(0, 0, 2), point3(2, 2, 2.6), prismGlass);
     auto prism = make_shared<rotate_y>(box2, 30);
     world.add(prism);
+    return world;
+}
+
+
+hittable_list glass_box_and_sphere2() {
+    hittable_list world;
+
+
+    auto ground_material = make_shared<lambertian>(color(0.5, 0.5, 0.5));
+    world.add(make_shared<sphere>(point3(0, -1000, 0), 1000, ground_material));
+
+    auto prismGlass = make_shared<dielectric>(color(1, 1, 1), 1.4, 0, 700);
+    world.add(make_shared<sphere>(point3(1.5, .6, -1.6), .6, prismGlass));
+
+    auto difflight = make_shared<directional_light>(color(40, 40, 40), 20);
+    world.add(make_shared<xy_rect>(1.2, 1.8, -1, 1.5, -.5, difflight));
+
+    auto box2 = make_shared<box>(point3(0, 0, 2), point3(2, 2, 2.6), prismGlass);
+    auto prism = make_shared<rotate_y>(box2, 30);
+    world.add(prism);
+
+    auto fog_boundary = make_shared<box>(point3(-3, 0, -4), point3(5, 4, 5), ground_material);
+    world.add(make_shared<fog>(fog_boundary, .02, color(1, 1, 1)));
+
     return world;
 }
 
@@ -135,6 +160,7 @@ hittable_list caustics() {
 
 hittable_list horse_scene() {
     hittable_list world;
+    auto rng = RNG();
 
     auto green = make_shared<metal>(color(0, 1., 1.),0.0);
     auto ground_material = make_shared<lambertian>(color(0.5, 0.5, 0.5));
@@ -144,22 +170,22 @@ hittable_list horse_scene() {
 
     for (int a = -11; a < 11; a++) {
         for (int b = -11; b < 11; b++) {
-            auto choose_mat = random_double();
-            point3 center(a + 0.9 * random_double(), 0.2, b + 0.9 * random_double());
+            auto choose_mat = rng.random_double();
+            point3 center(a + 0.9 * rng.random_double(), 0.2, b + 0.9 * rng.random_double());
 
             if ((center - point3(4, 0.2, 0)).length() > 0.9) {
                 shared_ptr<material> sphere_material;
 
                 if (choose_mat < 0.8) {
                     // diffuse
-                    auto albedo = random() * random();
+                    auto albedo = rng.random() * rng.random();
                     sphere_material = make_shared<lambertian>(albedo);
                     world.add(make_shared<sphere>(center, 0.2, sphere_material));
                 }
                 else if (choose_mat < 0.95) {
                     // metal
-                    auto albedo = random(0.5, 1);
-                    auto fuzz = random_double(0, 0.5);
+                    auto albedo = rng.random(0.5, 1);
+                    auto fuzz = rng.random_double(0, 0.5);
                     sphere_material = make_shared<metal>(albedo, fuzz);
                     world.add(make_shared<sphere>(center, 0.2, sphere_material));
                 }
@@ -183,9 +209,41 @@ hittable_list horse_scene() {
     return world;
 }
 
+hittable_list glass_cubes() {
+    auto rng = RNG();
+    hittable_list objects;
+    auto ground_mat = make_shared<lambertian>(color(0.48, 0.83, 0.53));
+    //objects.add(make_shared<sphere>(point3(0, -1000, 0), 1000, ground_mat));
+    const int concentric = 16;
+    for (int i = 0; i < concentric; i++) {
+        const double bw = 1.5 / concentric;
+        std::shared_ptr<material> glass = make_shared<dielectric>(1.32);
+
+        objects.add(make_shared<sphere>(point3(3, 1.5, 0), (i % 2)>0 ? i * bw : -i * bw, glass));
+    }
+
+
+    const int boxes_per_side = 40;
+    for (int i = 0; i < boxes_per_side; i++) {
+        for (int j = 0; j < boxes_per_side; j++) {
+            auto w = .5;
+            auto x0 = -7 + i * w;
+            auto z0 = -7 + j * w;
+            auto y0 = -0.2;
+            auto x1 = x0 + w;
+            auto y1 = rng.random_double(.2, .5);
+            auto z1 = z0 + w;
+
+            objects.add(make_shared<box>(point3(x0, y0, z0), point3(x1, y1, z1), ground_mat));
+        }
+    }
+
+    return objects;
+}
 
 
 hittable_list final_scene() {
+    auto rng = RNG();
     hittable_list objects;
     hittable_list boxes1;
     auto ground = make_shared<lambertian>(color(0.48, 0.83, 0.53));
@@ -198,7 +256,7 @@ hittable_list final_scene() {
             auto z0 = -1000.0 + j * w;
             auto y0 = 0.0;
             auto x1 = x0 + w;
-            auto y1 = random_double(1, 101);
+            auto y1 = rng.random_double(1, 101);
             auto z1 = z0 + w;
 
             objects.add(make_shared<box>(point3(x0, y0, z0), point3(x1, y1, z1), ground));
@@ -230,7 +288,7 @@ hittable_list final_scene() {
     auto white = make_shared<lambertian>(color(.73, .73, .73));
     int ns = 1000;
     for (int j = 0; j < ns; j++) {
-        boxes2.add(make_shared<sphere>(random(0, 165)+vec3(-100, 270, 395), 10, white));
+        boxes2.add(make_shared<sphere>(rng.random(0, 165)+vec3(-100, 270, 395), 10, white));
     }
 
     return objects;

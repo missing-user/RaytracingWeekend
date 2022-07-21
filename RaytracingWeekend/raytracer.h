@@ -16,30 +16,30 @@ struct tile {
     tile() : x(0), y(0), x_end(0), y_end(0) {};
 };
 
-static color dispersed_ray_color(const hit_record& rec, const ray& r, const hittable& h, int depth);
+static color dispersed_ray_color(RNG& rng, const hit_record& rec, const ray& r, const hittable& h, int depth);
 
-static color ray_color(const ray& r, const hittable& h, int depth) {
+static color ray_color(RNG& rng, const ray& r, const hittable& h, int depth) {
     hit_record rec;
     if (depth <= 0)
         return color();
 
     
-    if (h.hit(r, global_t_min, infinity, rec)) {
+    if (h.hit(rng, r, global_t_min, infinity, rec)) {
         ray scattered;
         color attenuation;
-        color emitted = rec.mat_ptr->emitted(rec.p);
+        color emitted = rec.mat_ptr->emitted(rng, r, rec);
 
         #ifdef DISPERSION
         if (dynamic_cast<dielectric*>(rec.mat_ptr) && r.lambda() == white_wavelength) {
-            return  emitted + dispersed_ray_color(rec, r, h, depth-1);
+            return  emitted + dispersed_ray_color(rng, rec, r, h, depth-1);
         }else
         #endif
 
-        if (rec.mat_ptr->scatter(r, rec, attenuation, scattered)){
+        if (rec.mat_ptr->scatter(rng, r, rec, attenuation, scattered)){
             #ifdef DEBUG_DEPTH
             attenuation = color(1, 1, 1);
             #endif
-            return emitted + ray_color(scattered, h, depth - 1) * attenuation;
+            return emitted + ray_color(rng, scattered, h, depth - 1) * attenuation;
         }
         #ifndef DEBUG_DEPTH
         return emitted;
@@ -50,7 +50,7 @@ static color ray_color(const ray& r, const hittable& h, int depth) {
     return color(depth, depth, depth);
     #endif
 
-    //return color();
+    return color();
     vec3 unit_direction = unit_vector(r.direction());
     auto t = 0.5 * (unit_direction.y() + 1.0);
     return ( (1.0 - t) * color(1.0, 1.0, 1.0) + t * color(0.5, 0.7, 1.0)); // sky color
@@ -79,7 +79,7 @@ static color fraction_to_color(double fraction) {
 }
 
 #ifdef DISPERSION
-static color dispersed_ray_color(const hit_record& rec, const ray& r, const hittable& h, int depth) {
+static color dispersed_ray_color(RNG& rng, const hit_record& rec, const ray& r, const hittable& h, int depth) {
     color tmp_ray_col = color();
     const int num_disp_rays = 6;
     for (int i = 0; i < num_disp_rays; i++)
@@ -95,7 +95,7 @@ static color dispersed_ray_color(const hit_record& rec, const ray& r, const hitt
 
         ray scattered;
         color attenuation;
-        if (rec.mat_ptr->scatter(dispersed_ray, rec, attenuation, scattered)) {
+        if (rec.mat_ptr->scatter(rng, dispersed_ray, rec, attenuation, scattered)) {
 #ifdef DISCRETE_DISPERSION
             disp_color = color(0, 0, 1.5);
             if (i == 1)
@@ -119,7 +119,7 @@ static color dispersed_ray_color(const hit_record& rec, const ray& r, const hitt
             #endif
 
             //do not decrease depth counter, as the dispersed_ray_color function only splits the ray and does not call a recursion
-            tmp_ray_col += ray_color(scattered, h, depth) * attenuation * disp_color;
+            tmp_ray_col += ray_color(rng, scattered, h, depth) * attenuation * disp_color;
         }
     }
 
@@ -127,7 +127,7 @@ static color dispersed_ray_color(const hit_record& rec, const ray& r, const hitt
 }
 #endif
 
-static void render_tile(std::vector<color>& output, const hittable& world, const unsigned int sample_count, const int max_depth, camera& cam, const tile tile) {
+static void render_tile(RNG& rng, std::vector<color>& output, const hittable& world, const unsigned int sample_count, const int max_depth, camera& cam, const tile tile) {
     //for rendering a single tile on a thread
     for (int i = tile.x_end - 1; i >= tile.x; --i)
     {
@@ -138,14 +138,14 @@ static void render_tile(std::vector<color>& output, const hittable& world, const
 
             for (unsigned int s = 0; s < sample_count; ++s)
             {
-                vec3 sample = sample_pixel(i, j, cam.image_width, cam.image_height, s);
+                vec3 sample = sample_pixel(rng, i, j, cam.image_width, cam.image_height, s);
                 total_weight += sample.z();
 
-                ray r = cam.get_ray(sample.x(), sample.y());
+                ray r = cam.get_ray(rng, sample.x(), sample.y());
                 #ifdef DEBUG_DEPTH
                     pixel_color += color(1, 1, 1) - (ray_color(r, world, max_depth) / max_depth);
                 #else
-                    pixel_color += ray_color(r, world, max_depth) * sample.z();
+                    pixel_color += ray_color(rng, r, world, max_depth) * sample.z();
                 #endif
             }
             output[j * cam.image_width + i] = (pixel_color / total_weight);
@@ -154,12 +154,13 @@ static void render_tile(std::vector<color>& output, const hittable& world, const
 }
 
 static void consume_tiles(std::vector<color>& output, hittable& world, int sample_count, int max_depth, camera& cam, std::vector<tile>& tiles, std::atomic_int& tile_id, std::atomic_int& finished_threads) {
+    auto thread_rng = RNG();
     // This loop is running on every thread and consumes a new tile each time it finishes its previous one, until the atomic counter is larger than the number of tiles
     while (true) {
         if (tile_id >= tiles.size())
             break; //the queue is empty/tile is invalid, exit the thread
         tile next = tiles[tile_id++];
-        render_tile(output, world, sample_count, max_depth, cam, next);
+        render_tile(thread_rng, output, world, sample_count, max_depth, cam, next);
     }
     ++finished_threads;
 }
