@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
     camera cam(lookfrom, lookat, vup, vfov, aperture, dist_to_focus, 720);
 
     //Render
-    threaded_renderer renderer(cam.image_width, cam.image_height, 32, 2000, 50);
+    threaded_renderer renderer(cam.image_width, cam.image_height, 32, 300, 50);
     preview_gui gui(filename, cam.image_width, cam.image_height);
 
     std::cerr << "Initializing Scene" << std::endl;
@@ -58,7 +58,6 @@ int main(int argc, char* argv[])
     std::cerr << "Building BVH" << std::endl;
     auto bvh_scene = bvh_node(scene);
 
-    std::cerr << "Starting Render"<< std::endl;
     renderer.render(bvh_scene, cam);
     gui.open_gui(renderer);
     const auto elapsed = std::chrono::high_resolution_clock::now() - start;

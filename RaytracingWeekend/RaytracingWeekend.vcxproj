@@ -168,6 +168,7 @@
     <ClInclude Include="rtweekend.h" />
     <ClInclude Include="sampler.h" />
     <ClInclude Include="scene_generation.h" />
+    <ClInclude Include="spectrum.h" />
     <ClInclude Include="sphere.h" />
     <ClInclude Include="tinyexr.h" />
     <ClInclude Include="triangle.h" />

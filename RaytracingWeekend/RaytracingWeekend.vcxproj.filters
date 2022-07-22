@@ -89,5 +89,8 @@
     <ClInclude Include="prng.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="spectrum.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

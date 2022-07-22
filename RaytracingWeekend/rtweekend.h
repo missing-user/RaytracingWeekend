@@ -8,7 +8,7 @@
 #define EXR_SUPPORT
 //#define DEBUG_DEPTH
 #define DISPERSION
-#define DISCRETE_DISPERSION
+//#define DISCRETE_DISPERSION
 
 #define RANDOM_PRECALC_SHUFFLED random_values[random_index++ & (precompute_num-1)]
 #define RANDOM_PRECALC_MOD random_values[prng() & (precompute_num - 1)]

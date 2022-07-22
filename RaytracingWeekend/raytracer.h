@@ -9,6 +9,7 @@
 #include "material.h"
 #include "color.h"
 #include "sampler.h"
+#include "spectrum.h"
 
 struct tile {
     const int x, y, x_end, y_end;
@@ -56,40 +57,17 @@ static color ray_color(RNG& rng, const ray& r, const hittable& h, int depth) {
     return ( (1.0 - t) * color(1.0, 1.0, 1.0) + t * color(0.5, 0.7, 1.0)); // sky color
 }
 
-static color fraction_to_color(double fraction) {
-    fraction = 1 - fraction;
-    if (fraction < .25)
-    {
-        const double f = fraction*4;
-        return color(f, 0, 0);
-    }
-    if (fraction < .5)
-    {
-        const double f = fraction * 4-1;
-        return color((1-f),f,0);
-    }
-    if (fraction < .75)
-    {
-        const double f = fraction * 4 - 2;
-        return color(0, 1 - f, f);
-    }
-
-    const double f = fraction * 4 - 3;
-    return color(0, 0, 1-f);
-}
-
 #ifdef DISPERSION
 static color dispersed_ray_color(RNG& rng, const hit_record& rec, const ray& r, const hittable& h, int depth) {
     color tmp_ray_col = color();
-    const int num_disp_rays = 6;
+    const int num_disp_rays = 3;
     for (int i = 0; i < num_disp_rays; i++)
     {
 #ifdef DISCRETE_DISPERSION
         double frac = (double)i/ (double)num_disp_rays;
 #else
-        double frac = random_double();
+        double lambda = rng.random_double(lambda_start, lambda_end);
 #endif 
-        double lambda = 380. + frac * 340.;
         ray dispersed_ray = ray(r, lambda);
         color disp_color;
 
@@ -109,7 +87,7 @@ static color dispersed_ray_color(RNG& rng, const hit_record& rec, const ray& r, 
             else if (i >= 5)
                 continue;
 #else
-            disp_color = fraction_to_color(fmod(frac + 1.6, 1));
+            disp_color = lambda_to_rgb(lambda) * plancks_law(lambda, 8500);
 #endif // DISCRETE_DISPERSION
 
 
@@ -142,11 +120,13 @@ static void render_tile(RNG& rng, std::vector<color>& output, const hittable& wo
                 total_weight += sample.z();
 
                 ray r = cam.get_ray(rng, sample.x(), sample.y());
+
                 #ifdef DEBUG_DEPTH
                     pixel_color += color(1, 1, 1) - (ray_color(r, world, max_depth) / max_depth);
                 #else
                     pixel_color += ray_color(rng, r, world, max_depth) * sample.z();
                 #endif
+
             }
             output[j * cam.image_width + i] = (pixel_color / total_weight);
         }
@@ -203,6 +183,7 @@ public:
     }
 
     void render(hittable& world, camera& cam) {
+        std::cerr << "Starting render with " << sample_count << " samples and " << max_depth << " bounces at " << width << "x" << height << std::endl;
         create_tiles(); // these are the jobs for the thread pool
 
         // create the threads for our pool, each one will independently take tiles from the queue and render them one by one until the queue is empty
@@ -224,7 +205,7 @@ public:
             );
             //threads[i].detach();
         }
-        std::cerr << "Started " << threads.size() << " rendering threads" << std::endl;
+        std::cerr << "Created " << threads.size() << " rendering threads" << std::endl;
     }
 
     bool finished() const {
