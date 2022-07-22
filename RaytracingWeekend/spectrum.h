@@ -783,11 +783,14 @@ inline color XYZToRGB(const color xyz) {
 
 color lambda_to_xyz(const double wavelength) {
     size_t index = static_cast<unsigned int>(wavelength) - lambda_start;
+    index = std::min(nCIESamples-1, index);
+    size_t index2 = std::min(index + 1, nCIESamples - 1);
+
     double fractional = wavelength - static_cast<unsigned int>(wavelength);
 
-    double x = lerp(CIE_X[index], CIE_X[index + 1], fractional);
-    double y = lerp(CIE_Y[index], CIE_Y[index + 1], fractional);
-    double z = lerp(CIE_Z[index], CIE_Z[index + 1], fractional);
+    double x = lerp(CIE_X[index], CIE_X[index2], fractional);
+    double y = lerp(CIE_Y[index], CIE_Y[index2], fractional);
+    double z = lerp(CIE_Z[index], CIE_Z[index2], fractional);
     return vec3(x, y, z);
 }
 
