@@ -12,6 +12,7 @@ https://github.com/mmp/pbrt-v3/blob/aaa552a4b9cbf9dccb71450f47b268e0ed6370e2/src
 const size_t  nCIESamples = 471;
 const double lambda_start = 360;
 const double lambda_end = lambda_start + nCIESamples;
+const double white_wavelength = (lambda_end + lambda_start) / 2;
 
 #pragma region CIE_LUTs
 

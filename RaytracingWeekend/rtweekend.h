@@ -8,7 +8,6 @@
 #define EXR_SUPPORT
 //#define DEBUG_DEPTH
 #define DISPERSION
-//#define DISCRETE_DISPERSION
 
 #define RANDOM_PRECALC_SHUFFLED random_values[random_index++ & (precompute_num-1)]
 #define RANDOM_PRECALC_MOD random_values[prng() & (precompute_num - 1)]
@@ -27,7 +26,6 @@ const double global_t_min = 1e-6; //DBL_EPSILON?
 const double infinity = DBL_MAX;
 const double pi = 3.1415926535897932385;
 const double aspect_ratio = 16.0 / 9.0;
-const double white_wavelength = 550.;
 
 // Utility Functions
 inline double degrees_to_radians(const double degrees) {

@@ -1,11 +1,12 @@
 #pragma once
 #include "rtweekend.h"
+#include "spectrum.h"
 
 class ray {
 public:
-	ray() : wavelength(550.) {};
+	ray() : wavelength(white_wavelength) {};
 	ray(const ray& r, double lambda) : orig(r.orig), dir(r.dir), wavelength(lambda) {}
-	ray(const point3& origin, const vec3 direction) : orig(origin), dir(direction), wavelength(550.){}
+	ray(const point3& origin, const vec3 direction) : orig(origin), dir(direction), wavelength(white_wavelength){}
 	ray(const point3& origin, const vec3 direction, double wavelength) : orig(origin), dir(direction), wavelength(wavelength) {}
 
 	point3 origin() const { return orig; }
