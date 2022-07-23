@@ -69,7 +69,7 @@ hittable_list random_scene() {
     world.add(make_shared<sphere>(point3(0, 1, 0), 1.0, material1));
 
 
-    auto material2 = make_shared<lambertian>(color(5, 5, 5));
+    auto material2 = make_shared<lambertian>(color(.1, .9, .9));
     world.add(make_shared<sphere>(point3(-4, 1, 0), 1.0, material2));
 
     auto material3 = make_shared<metal>(color(0.7, 0.6, 0.5), 0.0);

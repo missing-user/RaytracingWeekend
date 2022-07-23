@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
     std::cerr << "Initializing Scene" << std::endl;
 
     // World
-    hittable_list scene = glass_box_and_sphere();
+    hittable_list scene = random_scene();
 
     std::cerr << "Building BVH" << std::endl;
     auto bvh_scene = bvh_node(scene);
