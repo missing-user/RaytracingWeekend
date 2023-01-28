@@ -7,7 +7,7 @@ public:
     sphere() : radius(0.) {};
 	sphere(point3 cen, double r, shared_ptr<material> m) : center(cen), radius(r), mat_ptr(m) {};
 
-	virtual bool hit(RNG& rng, const ray& r, double t_min, double t_max, hit_record& rec) const override;
+	virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
     virtual bool bounding_box(aabb& output_box) const override;
 
 public:
@@ -24,7 +24,7 @@ bool sphere::bounding_box(aabb& output_box) const {
     return true;
 }
 
-bool sphere::hit(RNG& rng, const ray& r, double t_min, double t_max, hit_record& rec) const {
+bool sphere::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
     const vec3 oc = r.origin() - center;
     const double a = r.direction().length_squared();
     const double half_b = dot(r.direction(), oc);

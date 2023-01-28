@@ -9,7 +9,7 @@ public:
 	
 	}
 
-	virtual bool hit(RNG& rng, const ray& r, double t_min, double t_max, hit_record& rec) const override;
+	virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
 	virtual bool bounding_box(aabb& output_box) const override {return boundary->bounding_box(output_box);}
 public:
 	shared_ptr<hittable> boundary;
@@ -17,14 +17,14 @@ public:
 	double neg_inv_density;
 };
 
-bool fog::hit(RNG& rng, const ray& r, double t_min, double t_max, hit_record& rec) const {
+bool fog::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
 	hit_record rec_enter, rec_exit;
 
 
-	if (!boundary->hit(rng, r, -infinity, infinity, rec_enter))
+	if (!boundary->hit(r, -infinity, infinity, rec_enter))
 		return false;
 
-	if (!boundary->hit(rng, r, rec_enter.t + global_t_min, infinity, rec_exit))
+	if (!boundary->hit(r, rec_enter.t + global_t_min, infinity, rec_exit))
 		return false;
 
 
@@ -40,7 +40,7 @@ bool fog::hit(RNG& rng, const ray& r, double t_min, double t_max, hit_record& re
 
 	const auto ray_length = r.direction().length();
 	const auto distance_inside_boundary = (rec_exit.t - rec_enter.t) * ray_length;
-	const auto hit_distance = neg_inv_density * log(rng.random_double());
+	const auto hit_distance = neg_inv_density * log(random_double());
 
 	if (hit_distance > distance_inside_boundary)
 		return false;
