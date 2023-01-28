@@ -17,7 +17,7 @@ public:
         precomputed_bounds = aabb(p_min, p_max);
 	}
 
-	virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
+	virtual bool hit(RNG& rng, const ray& r, double t_min, double t_max, hit_record& rec) const override;
 	virtual bool bounding_box(aabb& output_box) const override;
 public:
     shared_ptr<material> mat_ptr;
@@ -32,7 +32,7 @@ private:
 
 
 //Möller Trumbore ray triangle intersection algorithm 
-bool triangle::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
+bool triangle::hit(RNG& rng, const ray& r, double t_min, double t_max, hit_record& rec) const {
     auto pvec = cross(r.direction(), v0v2);
     double det = dot(v0v1, pvec);
 

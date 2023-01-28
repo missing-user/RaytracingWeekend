@@ -22,7 +22,7 @@ public:
         return true;
     }
 
-    virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
+    virtual bool hit(RNG& rng, const ray& r, double t_min, double t_max, hit_record& rec) const {
         //Blatantly copied from https://github.com/define-private-public/PSRayTracing, adapted to fit my architecture
 
         // The `k` values that are used for `Rect` construction
@@ -135,7 +135,7 @@ class rotate_y : public hittable {
 public:
     rotate_y(shared_ptr<hittable> p, double angle);
 
-    virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
+    virtual bool hit(RNG& rng, const ray& r, double t_min, double t_max, hit_record& rec) const override;
 
     virtual bool bounding_box(aabb& output_box) const override {
         output_box = bbox;
@@ -184,7 +184,7 @@ rotate_y::rotate_y(shared_ptr<hittable> p, double angle) : ptr(p) {
 }
 
 
-bool rotate_y::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
+bool rotate_y::hit(RNG& rng, const ray& r, double t_min, double t_max, hit_record& rec) const {
     auto origin = r.origin();
     auto direction = r.direction();
 
@@ -196,7 +196,7 @@ bool rotate_y::hit(const ray& r, double t_min, double t_max, hit_record& rec) co
 
     ray rotated_r(origin, direction);
 
-    if (!ptr->hit(rotated_r, t_min, t_max, rec))
+    if (!ptr->hit(rng, rotated_r, t_min, t_max, rec))
         return false;
 
     auto p = rec.p;

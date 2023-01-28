@@ -30,8 +30,8 @@ public:
         left_corner = origin - horizontal / 2 - vertical / 2 - w * focus_dist;
 	}
 
-    ray get_ray(double s, double t) const {
-        vec3 rd = lens_radius * random_in_unit_disk();
+    ray get_ray(RNG& rng, double s, double t) const {
+        vec3 rd = lens_radius * rng.random_in_unit_disk();
         vec3 offset = u * rd.x() + v * rd.y();
         return ray(origin+offset, left_corner + horizontal * s + vertical * t - origin-offset);
     }
