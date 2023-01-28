@@ -17,22 +17,22 @@ struct tile {
     tile() : x(0), y(0), x_end(0), y_end(0) {};
 };
 
-static color ray_color(RNG& rng, const ray& r, const hittable& h, int depth) {
+static color ray_color(const ray& r, const hittable& h, int depth) {
     hit_record rec;
     if (depth <= 0)
         return color();
 
     
-    if (h.hit(rng, r, global_t_min, infinity, rec)) {
+    if (h.hit(r, global_t_min, infinity, rec)) {
         ray scattered;
         color attenuation;
-        color emitted = rec.mat_ptr->emitted(rng, r, rec);
+        color emitted = rec.mat_ptr->emitted(r, rec);
 
-        if (rec.mat_ptr->scatter(rng, r, rec, attenuation, scattered)){
+        if (rec.mat_ptr->scatter(r, rec, attenuation, scattered)){
             #ifdef DEBUG_DEPTH
             attenuation = color(1, 1, 1);
             #endif
-            return emitted + ray_color(rng, scattered, h, depth - 1) * attenuation;
+            return emitted + ray_color(scattered, h, depth - 1) * attenuation;
         }
         #ifndef DEBUG_DEPTH
         return emitted;
@@ -49,7 +49,7 @@ static color ray_color(RNG& rng, const ray& r, const hittable& h, int depth) {
     return ( (1.0 - t) * color(1.0, 1.0, 1.0) + t * color(0.5, 0.7, 1.0)); // sky color
 }
 
-static void render_tile(RNG& rng, std::vector<color>& output, const hittable& world, const unsigned int sample_count, const int max_depth, const camera& cam, const tile tile) {
+static void render_tile(vector<color>& output, const hittable& world, const unsigned int sample_count, const int max_depth, const camera& cam, const tile tile) {
     //for rendering a single tile on a thread
     for (int i = tile.x_end - 1; i >= tile.x; --i)
     {
@@ -60,10 +60,10 @@ static void render_tile(RNG& rng, std::vector<color>& output, const hittable& wo
 
             for (unsigned int s = 0; s < sample_count; ++s)
             {
-                vec3 sample = sample_pixel(rng, i, j, cam.image_width, cam.image_height, s);
+                vec3 sample = sample_pixel(i, j, cam.image_width, cam.image_height, s);
                 total_weight += sample.z();
 
-                ray r = cam.get_ray(rng, sample.x(), sample.y());
+                ray r = cam.get_ray(sample.x(), sample.y());
 
 #ifdef DISPERSION
                 r.wavelength = rng.random_double(lambda_start, lambda_end);
@@ -73,7 +73,7 @@ static void render_tile(RNG& rng, std::vector<color>& output, const hittable& wo
 #ifdef DEBUG_DEPTH
                 sample_color = color(1, 1, 1) - (ray_color(r, world, max_depth) / max_depth);
 #else
-                sample_color = ray_color(rng, r, world, max_depth) * sample.z();
+                sample_color = ray_color(r, world, max_depth) * sample.z();
 #endif // DEBUG_DEPTH
 
 #ifdef DISPERSION
@@ -87,14 +87,12 @@ static void render_tile(RNG& rng, std::vector<color>& output, const hittable& wo
     }
 }
 
-static void consume_tiles(std::vector<color>& output, const hittable& world, int sample_count, int max_depth, const camera& cam, const std::vector<tile>& tiles, std::atomic_int& tile_id, std::atomic_int& finished_threads) {
-    auto thread_rng = RNG();
-    // This loop is running on every thread and consumes a new tile each time it finishes its previous one, until the atomic counter is larger than the number of tiles
+static void consume_tiles(vector<color>& output, const hittable& world, int sample_count, int max_depth, const camera& cam, const vector<tile>& tiles, std::atomic_int& tile_id, std::atomic_int& finished_threads) {
     while (true) {
         if (tile_id >= tiles.size())
             break; //the queue is empty/tile is invalid, exit the thread
         const tile next = tiles[tile_id++];
-        render_tile(thread_rng, output, world, sample_count, max_depth, cam, next);
+        render_tile(output, world, sample_count, max_depth, cam, next);
     }
     ++finished_threads;
 }
@@ -148,14 +146,14 @@ public:
             threads.push_back(
                 std::thread(
                     consume_tiles,
-                    std::ref(pixels), 
-                    std::ref(world), 
+                    ref(pixels), 
+                    ref(world), 
                     sample_count, 
                     max_depth, 
-                    std::ref(cam),
-                    std::ref(tiles),
-                    std::ref(tile_id),
-                    std::ref(finished_threads))
+                    ref(cam),
+                    ref(tiles),
+                    ref(tile_id),
+                    ref(finished_threads))
             );
             //threads[i].detach();
         }
@@ -169,10 +167,10 @@ public:
     const int width, height;
     const int num_threads;
     int tile_size, sample_count, max_depth;
-    std::vector<color> pixels{ width * height };
+    vector<color> pixels{ width * height };
 private:
-    std::vector<std::thread> threads;
-    std::vector<tile> tiles;
+    vector<std::thread> threads;
+    vector<tile> tiles;
     std::atomic_int tile_id = 0;
     std::atomic_int finished_threads = 0;
 };

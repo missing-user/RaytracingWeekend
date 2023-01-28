@@ -6,19 +6,19 @@
 Sampling Methods
 They return where the current pixel should be sampled, originating from the pixel center. The z coordinate does not have a meaning
 */
-static vec3 sample_uniform(RNG& rng, int sample_index) {
-	return rng.random()-vec3(.5,.5,0.);
+static vec3 sample_uniform(int sample_index) {
+	return random()-vec3(.5,.5,0.);
 }
 
-static vec3 sample_center(RNG& rng, int sample_index) {
+static vec3 sample_center(int sample_index) {
 	return vec3();
 }
 
-static vec3 sample_normal(RNG& rng, int sample_index) {
-	return vec3(rng.random_normal_double(), rng.random_normal_double(), 0.);
+static vec3 sample_normal(int sample_index) {
+	return vec3(random_normal_double(), random_normal_double(), 0.);
 }
 
-static vec3 sample_grid(RNG& rng, int sample_index) {
+static vec3 sample_grid(int sample_index) {
 	return vec3((sample_index % 10) / 10.-.5, (sample_index/10.)/10. - .5, 0.);
 }
 
@@ -61,7 +61,7 @@ Final combined method
 const auto filter = mitchell_filter;
 const auto sampler = sample_uniform;
 
-static vec3 sample_pixel(RNG& rng, int x, int y, int width, int height, int sample_index) {
-	const vec3 offset = sampler(rng, sample_index);
+static vec3 sample_pixel(int x, int y, int width, int height, int sample_index) {
+	const vec3 offset = sampler(sample_index);
 	return vec3((x + .5 + offset.x()) / (width - 1.), (y + .5 + offset.y()) / (height - 1.), filter(offset));
 }

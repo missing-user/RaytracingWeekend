@@ -23,7 +23,7 @@ public:
         : bvh_node(list.objects, 0, list.objects.size())
     {}
 
-    virtual bool hit(RNG& rng, const ray& r, double t_min, double t_max, hit_record& rec) const override;
+    virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
 
     virtual bool bounding_box(aabb& output_box) const override;
 
@@ -38,12 +38,12 @@ bool bvh_node::bounding_box(aabb& output_box) const {
     return true;
 }
 
-bool bvh_node::hit(RNG& rng, const ray& r, double t_min, double t_max, hit_record& rec) const {
+bool bvh_node::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
     if (!box.hit(r, t_min, t_max))
         return false;
 
-    bool hit_left = left->hit(rng, r, t_min, t_max, rec);
-    bool hit_right = right->hit(rng, r, t_min, hit_left ? rec.t : t_max, rec);
+    bool hit_left = left->hit(r, t_min, t_max, rec);
+    bool hit_right = right->hit(r, t_min, hit_left ? rec.t : t_max, rec);
 
     return hit_left || hit_right;
 }
@@ -107,7 +107,7 @@ bvh_node::bvh_node(std::vector<shared_ptr<hittable>>& src_objects,
     }
     else{
         // multiple axis have the same size, pick a random one
-        axis = RNG::random_int(0, 2);
+        axis = random_int(0, 2);
     }
     auto comparator = (axis == 0) ? box_x_compare
         : (axis == 1) ? box_y_compare

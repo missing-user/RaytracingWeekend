@@ -15,7 +15,7 @@ public:
 	}
 	void add(shared_ptr<hittable> object) { objects.push_back(object); }
 	
-	virtual bool hit(RNG& rng, const ray& r, double t_min, double t_max, hit_record& rec) const override;
+	virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
 	virtual bool bounding_box(aabb& output_box) const override;
 
 public:
@@ -43,14 +43,14 @@ bool hittable_list::bounding_box(aabb& output_box) const {
 	return true;
 }
 
-bool hittable_list::hit(RNG& rng, const ray& r, double t_min, double t_max, hit_record& rec) const {
+bool hittable_list::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
 	hit_record tmp_rec;
 	bool hit_anything=false;
 	double closest_so_far = t_max;
 
 	for (const auto& object : objects)
 	{
-		if (object -> hit(rng, r, t_min, closest_so_far, tmp_rec)) {
+		if (object -> hit(r, t_min, closest_so_far, tmp_rec)) {
 			hit_anything =true;
 			closest_so_far = tmp_rec.t;
 			rec = tmp_rec;

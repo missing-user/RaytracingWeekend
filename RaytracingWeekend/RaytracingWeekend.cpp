@@ -42,8 +42,6 @@ int main(int argc, char* argv[])
 
     dist_to_focus = 12.0;
 
-    auto main_rng = RNG(); //initialize a main thread RNG object
-
     camera cam(lookfrom, lookat, vup, vfov, aperture, dist_to_focus, 720);
 
     //Render
