@@ -12,8 +12,8 @@ public:
         ) : image_width(horizontal_resolution), image_height(static_cast<int>(horizontal_resolution / aspect_ratio))
      {
         //Camera orientation
-        w = unit_vector(lookfrom - lookat);
-        u = unit_vector(cross(vup, w));
+        w = glm::normalize(lookfrom - lookat);
+        u = glm::normalize(cross(vup, w));
         v = cross(w, u);
 
         //Camera Projection Plane
@@ -27,12 +27,12 @@ public:
         origin = lookfrom;
         horizontal = focus_dist*viewport_width * u;
         vertical = focus_dist*viewport_height * v;
-        left_corner = origin - horizontal / 2 - vertical / 2 - w * focus_dist;
+        left_corner = origin - horizontal / 2.0 - vertical / 2.0 - w * focus_dist;
 	}
 
     ray get_ray(double s, double t) const {
         vec3 rd = lens_radius * random_in_unit_disk();
-        vec3 offset = u * rd.x() + v * rd.y();
+        vec3 offset = u * rd.x + v * rd.y;
         return ray(origin+offset, left_corner + horizontal * s + vertical * t - origin-offset);
     }
 private:

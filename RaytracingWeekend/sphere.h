@@ -26,9 +26,9 @@ bool sphere::bounding_box(aabb& output_box) const {
 
 bool sphere::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
     const vec3 oc = r.origin() - center;
-    const double a = r.direction().length_squared();
+    const double a = glm::length2(r.direction());
     const double half_b = dot(r.direction(), oc);
-    const double c = oc.length_squared() - radius * radius;
+    const double c = glm::length2(oc) - radius * radius;
 
     const double discriminant = half_b * half_b - a * c;
     if (discriminant < 0) 

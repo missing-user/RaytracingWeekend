@@ -33,6 +33,6 @@ public:
 
 static aabb surrounding_box(const aabb box0, const aabb box1) {
     return aabb(
-        vmin(box0.min(), box1.min()), 
-        vmax(box0.max(), box1.max()));
+        glm::min(box0.min(), box1.min()), 
+        glm::max(box0.max(), box1.max()));
 }

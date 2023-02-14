@@ -1,5 +1,6 @@
 #pragma once
-#include "vec3.h"
+#include "rtweekend.h"
+typedef vec3 color;
 
 /*
 CIE Tables and XYZ to RGB conversion from the Book Physically Based Rendering, chapter 5
@@ -9,7 +10,7 @@ According GitHub code:
 https://github.com/mmp/pbrt-v3/blob/aaa552a4b9cbf9dccb71450f47b268e0ed6370e2/src/core/spectrum.cpp
 */
 
-const size_t  nCIESamples = 471;
+const size_t nCIESamples = 471;
 const double lambda_start = 360;
 const double lambda_end = lambda_start + nCIESamples;
 const double white_wavelength = (lambda_end + lambda_start) / 2;
@@ -772,11 +773,12 @@ double lerp(double v1, double v2, double percent) {
     return v1 * (1 - percent) + v2 * percent;
 }
 
-inline color XYZToRGB(const color xyz) {
-    color rgb;
-    rgb[0] = 3.240479 * xyz[0] - 1.537150 * xyz[1] - 0.498535 * xyz[2];
-    rgb[1] = -0.969256 * xyz[0] + 1.875991 * xyz[1] + 0.041556 * xyz[2];
-    rgb[2] = 0.055648 * xyz[0] - 0.204043 * xyz[1] + 1.057311 * xyz[2];
+inline color XYZToRGB(const color& xyz) {
+    color rgb{
+        3.240479 * xyz[0] - 1.537150 * xyz[1] - 0.498535 * xyz[2],
+        -0.969256 * xyz[0] + 1.875991 * xyz[1] + 0.041556 * xyz[2],
+        0.055648 * xyz[0] - 0.204043 * xyz[1] + 1.057311 * xyz[2]
+    };
     return rgb;
 }
 

@@ -26,7 +26,7 @@ static vec3 sample_grid(int sample_index) {
 Filter Methods
 */
 
-static double box_filter(vec3 uv) {
+static double box_filter(const vec3& uv) {
 	return 1.;
 }
 
@@ -43,15 +43,15 @@ static double Mitchell1D(double x) {
 			(6 - 2 * B)) * (1.f / 6.f);
 }
 
-static double mitchell_filter(vec3 uv) {
-	double weight = Mitchell1D(uv.x()) * Mitchell1D(uv.y());
+static double mitchell_filter(const vec3& uv) {
+	double weight = Mitchell1D(uv.x) * Mitchell1D(uv.y);
 	return 2. * weight;
 }
 
-static double gauss_filter(vec3 uv) {
+static double gauss_filter(const vec3& uv) {
 	const double alpha = 8;
 	const double k = std::exp(-alpha * .5 * .5) * std::exp(-alpha * .5 * .5);
-	return std::exp(-alpha * uv.x() * uv.x()) * std::exp(-alpha * uv.x() * uv.x()) - k;
+	return std::exp(-alpha * uv.x * uv.x) * std::exp(-alpha * uv.x * uv.x) - k;
 }
 
 /*
@@ -63,5 +63,5 @@ const auto sampler = sample_uniform;
 
 static vec3 sample_pixel(int x, int y, int width, int height, int sample_index) {
 	const vec3 offset = sampler(sample_index);
-	return vec3((x + .5 + offset.x()) / (width - 1.), (y + .5 + offset.y()) / (height - 1.), filter(offset));
+	return vec3((x + .5 + offset.x) / (width - 1.), (y + .5 + offset.y) / (height - 1.), filter(offset));
 }

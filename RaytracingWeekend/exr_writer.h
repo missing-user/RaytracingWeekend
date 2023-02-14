@@ -167,9 +167,9 @@ void write_exr_file(const char *filepath, const int width, const int height, con
 	const int i_max = pixels.size();
 	for (int i = 0; i < i_max; i++)
 	{
-		auto r = pixels[i_max - i - 1].x();
-		const auto g = pixels[i_max - i - 1].y();
-		const auto b = pixels[i_max - i - 1].z();
+		auto r = pixels[i_max - i - 1].x;
+		const auto g = pixels[i_max - i - 1].y;
+		const auto b = pixels[i_max - i - 1].z;
 
 		//linear colorspace in the exr image, gamma can be chosen later
 		rgb[3 * i + 0] = float_to_half(static_cast<float>(r));

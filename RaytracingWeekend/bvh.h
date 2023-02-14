@@ -48,7 +48,6 @@ bool bvh_node::hit(const ray& r, double t_min, double t_max, hit_record& rec) co
     return hit_left || hit_right;
 }
 
-
 inline bool box_compare(const shared_ptr<hittable> a, const shared_ptr<hittable> b, int axis) {
     aabb box_a;
     aabb box_b;
@@ -56,7 +55,7 @@ inline bool box_compare(const shared_ptr<hittable> a, const shared_ptr<hittable>
     if (!a->bounding_box(box_a) || !b->bounding_box(box_b))
         std::cerr << "No bounding box in bvh_node constructor.\n";
 
-    return box_a.min().e[axis] < box_b.min().e[axis];
+    return box_a.min()[axis] < box_b.min()[axis];
 }
 
 
@@ -69,19 +68,19 @@ inline double pair_axis_dist(const std::pair<std::vector<shared_ptr<hittable>>::
     if (!a->bounding_box(box_a) || !b->bounding_box(box_b))
         std::cerr << "No bounding box in bvh_node constructor.\n";
 
-    return box_b.max().e[axis] - box_a.min().e[axis];
+    return box_b.max()[axis] - box_a.min()[axis];
 }
 
 
-bool box_x_compare(const shared_ptr<hittable> a, const shared_ptr<hittable> b) {
+bool box_x_compare(const shared_ptr<hittable>& a, const shared_ptr<hittable>& b) {
     return box_compare(a, b, 0);
 }
 
-bool box_y_compare(const shared_ptr<hittable> a, const shared_ptr<hittable> b) {
+bool box_y_compare(const shared_ptr<hittable>& a, const shared_ptr<hittable>& b) {
     return box_compare(a, b, 1);
 }
 
-bool box_z_compare(const shared_ptr<hittable> a, const shared_ptr<hittable> b) {
+bool box_z_compare(const shared_ptr<hittable>& a, const shared_ptr<hittable>& b) {
     return box_compare(a, b, 2);
 }
 

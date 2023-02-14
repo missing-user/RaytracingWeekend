@@ -6,13 +6,13 @@ class triangle : public hittable {
 public:
 	triangle(){}
 	triangle(point3 p0, point3 p1, point3 p2, shared_ptr<material> m) :v0(p0), v1(p1), v2(p2), mat_ptr(m) {
-        outward_normal = unit_vector(cross(v1-v0,v2-v0));
+        outward_normal = glm::normalize(cross(v1-v0,v2-v0));
         v0v1 = v1 - v0;
         v0v2 = v2 - v0;
 
         //compute bounds
-        point3 p_min = vmin(vmin(v0, v1), v2);
-        point3 p_max = vmax(vmax(v0, v1), v2);
+        point3 p_min = glm::min(glm::min(v0, v1), v2);
+        point3 p_max = glm::max(glm::max(v0, v1), v2);
 
         precomputed_bounds = aabb(p_min, p_max);
 	}

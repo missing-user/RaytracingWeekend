@@ -20,9 +20,9 @@ public:
         const int i_max = renderer.pixels.size();
         for (int i = 0; i < i_max; i++)
         {
-            const auto r = sqrt(renderer.pixels[i_max - i - 1].x() );
-            const auto g = sqrt(renderer.pixels[i_max - i - 1].y() );
-            const auto b = sqrt(renderer.pixels[i_max - i - 1].z() );
+            const auto r = sqrt(renderer.pixels[i_max - i - 1].x );
+            const auto g = sqrt(renderer.pixels[i_max - i - 1].y );
+            const auto b = sqrt(renderer.pixels[i_max - i - 1].z );
 
             out_uint_pixels[4 * i + 0] = sf::Uint8(255.999 * clamp(r));
             out_uint_pixels[4 * i + 1] = sf::Uint8(255.999 * clamp(g));
@@ -67,7 +67,7 @@ public:
                 finished_rendering = true;
             }
 
-            std::cerr<< "\rProgress: " << std::fixed << std::setprecision(1) << renderer.get_percentage() * 100 << "% " << std::flush;
+            std::cerr << "\rProgress: " << std::fixed << std::setprecision(1) << renderer.get_percentage() * 100 << "% "<< std::flush;
 
             sf::sleep(sf::milliseconds(500));
         }

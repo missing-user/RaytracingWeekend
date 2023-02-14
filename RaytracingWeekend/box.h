@@ -27,57 +27,57 @@ public:
 
         // The `k` values that are used for `Rect` construction
         const double k[6]{
-            box_max.z(),         // Back
-            box_min.z(),         // Front
-            box_max.y(),         // Top
-            box_min.y(),         // Bottom
-            box_max.x(),         // Left
-            box_min.x()          // Right
+            box_max.z,         // Back
+            box_min.z,         // Front
+            box_max.y,         // Top
+            box_min.y,         // Bottom
+            box_max.x,         // Left
+            box_min.x          // Right
         };
 
         const double t[6]{
-            (k[Back] - r.origin().z()) / r.direction().z(),
-            (k[Front] - r.origin().z()) / r.direction().z(),
-            (k[Top] - r.origin().y()) / r.direction().y(),
-            (k[Bottom] - r.origin().y()) / r.direction().y(),
-            (k[Left] - r.origin().x()) / r.direction().x(),
-            (k[Right] - r.origin().x()) / r.direction().x()
+            (k[Back] - r.origin().z) / r.direction().z,
+            (k[Front] - r.origin().z) / r.direction().z,
+            (k[Top] - r.origin().y) / r.direction().y,
+            (k[Bottom] - r.origin().y) / r.direction().y,
+            (k[Left] - r.origin().x) / r.direction().x,
+            (k[Right] - r.origin().x) / r.direction().x
         };
 
         const double x[6]{
-            r.origin().x() + (t[Back] * r.direction().x()),
-            r.origin().x() + (t[Front] * r.direction().x()),
-            r.origin().x() + (t[Top] * r.direction().x()),
-            r.origin().x() + (t[Bottom] * r.direction().x()),
+            r.origin().x + (t[Back] * r.direction().x),
+            r.origin().x + (t[Front] * r.direction().x),
+            r.origin().x + (t[Top] * r.direction().x),
+            r.origin().x + (t[Bottom] * r.direction().x),
             0,
             0
         };
 
         const double y[6]{
-            r.origin().y() + (t[Back] * r.direction().y()),
-            r.origin().y() + (t[Front] * r.direction().y()),
+            r.origin().y + (t[Back] * r.direction().y),
+            r.origin().y + (t[Front] * r.direction().y),
             0,
             0,
-            r.origin().y() + (t[Left] * r.direction().y()),
-            r.origin().y() + (t[Right] * r.direction().y())
+            r.origin().y + (t[Left] * r.direction().y),
+            r.origin().y + (t[Right] * r.direction().y)
         };
 
         const double z[6]{
             0,
             0,
-            r.origin().z() + (t[Top] * r.direction().z()),
-            r.origin().z() + (t[Bottom] * r.direction().z()),
-            r.origin().z() + (t[Left] * r.direction().z()),
-            r.origin().z() + (t[Right] * r.direction().z())
+            r.origin().z + (t[Top] * r.direction().z),
+            r.origin().z + (t[Bottom] * r.direction().z),
+            r.origin().z + (t[Left] * r.direction().z),
+            r.origin().z + (t[Right] * r.direction().z)
         };
 
         const bool did_hit[6]{
-            (t[Back] > t_min) && (t[Back] < t_max) && (x[Back] > box_min.x()) && (x[Back] < box_max.x()) && (y[Back] > box_min.y()) && (y[Back] < box_max.y()),
-            (t[Front] > t_min) && (t[Front] < t_max) && (x[Front] > box_min.x()) && (x[Front] < box_max.x()) && (y[Front] > box_min.y()) && (y[Front] < box_max.y()),
-            (t[Top] > t_min) && (t[Top] < t_max) && (x[Top] > box_min.x()) && (x[Top] < box_max.x()) && (z[Top] > box_min.z()) && (z[Top] < box_max.z()),
-            (t[Bottom] > t_min) && (t[Bottom] < t_max) && (x[Bottom] > box_min.x()) && (x[Bottom] < box_max.x()) && (z[Bottom] > box_min.z()) && (z[Bottom] < box_max.z()),
-            (t[Left] > t_min) && (t[Left] < t_max) && (y[Left] > box_min.y()) && (y[Left] < box_max.y()) && (z[Left] > box_min.z()) && (z[Left] < box_max.z()),
-            (t[Right] > t_min) && (t[Right] < t_max) && (y[Right] > box_min.y()) && (y[Right] < box_max.y()) && (z[Right] > box_min.z()) && (z[Right] < box_max.z()),
+            (t[Back] > t_min) && (t[Back] < t_max) && (x[Back] > box_min.x) && (x[Back] < box_max.x) && (y[Back] > box_min.y) && (y[Back] < box_max.y),
+            (t[Front] > t_min) && (t[Front] < t_max) && (x[Front] > box_min.x) && (x[Front] < box_max.x) && (y[Front] > box_min.y) && (y[Front] < box_max.y),
+            (t[Top] > t_min) && (t[Top] < t_max) && (x[Top] > box_min.x) && (x[Top] < box_max.x) && (z[Top] > box_min.z) && (z[Top] < box_max.z),
+            (t[Bottom] > t_min) && (t[Bottom] < t_max) && (x[Bottom] > box_min.x) && (x[Bottom] < box_max.x) && (z[Bottom] > box_min.z) && (z[Bottom] < box_max.z),
+            (t[Left] > t_min) && (t[Left] < t_max) && (y[Left] > box_min.y) && (y[Left] < box_max.y) && (z[Left] > box_min.z) && (z[Left] < box_max.z),
+            (t[Right] > t_min) && (t[Right] < t_max) && (y[Right] > box_min.y) && (y[Right] < box_max.y) && (z[Right] > box_min.z) && (z[Right] < box_max.z),
         };
 
         // First see if any of them hit
@@ -163,9 +163,9 @@ rotate_y::rotate_y(shared_ptr<hittable> p, double angle) : ptr(p) {
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 2; j++) {
             for (int k = 0; k < 2; k++) {
-                auto x = i * bbox.max().x() + (1 - i) * bbox.min().x();
-                auto y = j * bbox.max().y() + (1 - j) * bbox.min().y();
-                auto z = k * bbox.max().z() + (1 - k) * bbox.min().z();
+                auto x = i * bbox.max().x + (1 - i) * bbox.min().x;
+                auto y = j * bbox.max().y + (1 - j) * bbox.min().y;
+                auto z = k * bbox.max().z + (1 - k) * bbox.min().z;
 
                 auto newx = cos_theta * x + sin_theta * z;
                 auto newz = -sin_theta * x + cos_theta * z;

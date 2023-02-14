@@ -1,8 +1,16 @@
 #pragma once
+#define GLM_FORCE_INTRINSICS
+#include "glm/glm.hpp"
+#include "glm/gtc/epsilon.hpp"
+#define GLM_ENABLE_EXPERIMENTAL
+#include "glm/gtx/norm.hpp"
+
+typedef glm::highp_dvec3 vec3;
+typedef vec3 point3;
 
 #include <memory>
 #include "prng.h"
-#include "vec3.h"
+#include "spectrum.h"
 #include "ray.h"
 #include "pcg_extras.hpp"
 #include "pcg_random.hpp"
@@ -58,44 +66,45 @@ inline double random_double() {
 }
 
 
-static int random_int(const int min, const int max) {
+int random_int(const int min, const int max) {
     auto tmpprng = smallprng::knuth_lcg();
     return (tmpprng() % (max - min)) + min;
 }
 
-inline double random_normal_double() {
+double random_normal_double() {
     return prng.rand_normal(0., .2);
     //return prng.rand_normal();
 }
 
-inline double random_double(const double min, const double max) {
+double random_double(const double min, const double max) {
     return random_double() * (max - min) + min;
 }
 
-inline vec3 random() {
+vec3 random() {
     return vec3(random_double(), random_double(), random_double());
 }
 
-inline vec3 random(double min, double max) {
+vec3 random(double min, double max) {
     return vec3(random_double(min, max), random_double(min, max), random_double(min, max));
 }
 
-inline vec3 random_in_unit_sphere() {
+vec3 random_in_unit_sphere() {
+
     while (true) {
         auto p = random(-1, 1);
-        if (p.length() < 1)
+        if (glm::length2(p) < 1)
             return p;
     }
 }
 
-inline vec3 random_in_unit_disk() {
+vec3 random_in_unit_disk() {
     while (true) {
         auto p = vec3(random_double(-1, 1), random_double(-1, 1), 0);
-        if (p.length() < 1)
+        if (glm::length2(p) < 1)
             return p;
     }
 }
 
-inline vec3 random_unit_vector() {
-    return unit_vector(random_in_unit_sphere());
+vec3 random_unit_vector() {
+    return glm::normalize(random_in_unit_sphere());
 }
