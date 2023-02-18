@@ -2,7 +2,7 @@
 #include "rtweekend.h"
 
 class ray {
-public:
+private:
 	vec3 orig;
 	double wavelength;
 	vec3 dir;

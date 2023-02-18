@@ -773,7 +773,7 @@ double lerp(double v1, double v2, double percent) {
     return v1 * (1 - percent) + v2 * percent;
 }
 
-inline color XYZToRGB(const color& xyz) {
+color XYZToRGB(const color& xyz) {
     color rgb{
         3.240479 * xyz[0] - 1.537150 * xyz[1] - 0.498535 * xyz[2],
         -0.969256 * xyz[0] + 1.875991 * xyz[1] + 0.041556 * xyz[2],
@@ -783,7 +783,7 @@ inline color XYZToRGB(const color& xyz) {
 }
 
 
-color lambda_to_xyz(const double wavelength) {
+color lambda_to_xyz(double wavelength) {
     size_t index = static_cast<unsigned int>(wavelength) - lambda_start;
     index = std::min(nCIESamples-1, index);
     size_t index2 = std::min(index + 1, nCIESamples - 1);
@@ -796,20 +796,23 @@ color lambda_to_xyz(const double wavelength) {
     return vec3(x, y, z);
 }
 
-
-inline double plancks_law(const double wavelength, const double temperature) {
+// TODO: This should be constexpr
+constexpr double plancks_law(const double wavelength, const double temperature) {
     //return the spectral intensity at a given wavelength
-    const double h = 6.626e-34 * 1e9;//correction for nm
-    const double kb = 1.381e-23;
-    const double c = 299792458;
+    constexpr double h = 6.626e-34 * 1e9;//correction for nm
+    constexpr double kb = 1.381e-23;
+    constexpr double c = 299792458;
 
-    const double numerator = 2 * h * c * c;
+    constexpr double numerator = 2 * h * c * c;
     const double expo = h * c / kb / temperature;
 
-    return numerator / (std::pow(wavelength*1e-6, 4) * wavelength * (std::exp(expo / wavelength) - 1));
+    auto pow2 = (wavelength * 1e-6) * (wavelength * 1e-6);
+    auto pow4 = pow2 * pow2;
+
+    return numerator / (pow4 * wavelength * (std::exp(expo / wavelength) - 1));
 }
 
-color lambda_to_rgb(const double wavelength) {
+color lambda_to_rgb(double wavelength) {
     auto xyz = lambda_to_xyz(wavelength); 
     return  XYZToRGB(xyz);
 }

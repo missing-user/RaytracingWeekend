@@ -19,7 +19,7 @@ public:
 
 		if (glm::all(glm::epsilonEqual(scatter_direction, vec3(0,0,0), global_t_min))) scatter_direction = rec.normal;
 
-		scattered = ray(rec.p, scatter_direction, r_in.wavelength);
+		scattered = ray(rec.p, scatter_direction, r_in.lambda());
 		attenuation = albedo;
 		return true;
 	}
@@ -37,7 +37,7 @@ public:
 		auto scatter_direction = rec.normal + random_unit_vector();
 		if (glm::all(glm::epsilonEqual(scatter_direction, vec3(0, 0, 0), global_t_min))) scatter_direction = rec.normal;
 
-		scattered = ray(rec.p, scatter_direction, r_in.wavelength);
+		scattered = ray(rec.p, scatter_direction, r_in.lambda());
 		attenuation = albedo;
 		return true;
 	}
@@ -78,7 +78,7 @@ public:
 	metal(const color & a, double f): albedo(a), fuzz(f< 1? f:1){}
 	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
 		vec3 reflected = reflect(glm::normalize(r_in.direction()), rec.normal);
-		scattered = ray(rec.p, reflected + fuzz * random_in_unit_sphere(), r_in.wavelength);
+		scattered = ray(rec.p, reflected + fuzz * random_in_unit_sphere(), r_in.lambda());
 		attenuation = albedo;
 		return dot(scattered.direction(), rec.normal) > 0;
 	}
@@ -114,7 +114,7 @@ public:
 		}
 		else
 			scatter_direction  = glm::reflect(glm::normalize(r_in.direction()), rec.normal);
-		scattered = ray(rec.p, scatter_direction, r_in.wavelength);
+		scattered = ray(rec.p, scatter_direction, r_in.lambda());
 		attenuation = albedo;
 		return dot(scattered.direction(), rec.normal) > 0;
 	}
@@ -152,7 +152,7 @@ public:
 			direction += random() * blur;
 		}
 		attenuation = albedo;
-		scattered = ray(rec.p, direction, r_in.wavelength);
+		scattered = ray(rec.p, direction, r_in.lambda());
 		return true;
 	}
 	color albedo;
@@ -160,14 +160,111 @@ public:
 	double blur;
 	double dispersion = 0.044*1e3; // dispersion coefficient in nanometers
 private:
-	static double reflectance(double cosine, double ref_idx) {
+	inline double fastpow5(double input) const {
+		const double a = input * input;
+		return a * a * input;
+	}
+
+	double reflectance(double cosine, double ref_idx) const {
 		//Schlicks approximation
 		auto r0 = (1 - ref_idx) / (1 + ref_idx);
 		r0 = r0 * r0;
-		return r0 + (1 - r0) * pow((1 - cosine), 5);
+
+
+
+		return r0 + (1 - r0) * fastpow5(1 - cosine);
+	}
+	
+	double ri_at_lambda(double ri, double disp, double wavelength) const {
+		return ri + (disp / wavelength);
+	}
+};
+
+class thinfilm : public material {
+public:
+	thinfilm(const color& a, double t, double n, const shared_ptr<material> underlying) : albedo(a), thickness(t), n1(n), underlying(underlying) {}
+	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {		
+		const double cos0 = abs(dot(r_in.direction(), rec.normal));
+
+		const double n0 = 1;
+		const double n2 = 1;
+
+
+		// compute the phase change term (constant)
+		double d10 = (n1 > n0) ? 0 : pi;
+		double d12 = (n1 > n2) ? 0 : pi;
+		double delta = d10 + d12;
+
+		double t=0; // transmitted light
+
+		// now, compute cos1, the cosine of the reflected angle
+		double sin1 = pow(n0 / n1, 2) * (1 - cos0 * cos0);
+		double sin2 = pow(n0 / n2, 2) * (1 - cos0 * cos0);
+
+		if (sin1 > 1 || sin2 > 1) t = 1; // total internal reflection
+		else {
+			double cos1 = sqrt(1 - sin1);
+
+			// compute cos2, the cosine of the final transmitted angle, i.e. cos(theta_2)
+			// we need this angle for the Fresnel terms at the bottom interface
+			double cos2 = sqrt(1 - sin2);
+
+			// get the reflection transmission amplitude Fresnel coefficients
+			double alpha_s = rs(n1, n0, cos1, cos0) * rs(n1, n2, cos1, cos2); // rho_10 * rho_12 (s-polarized)
+			double alpha_p = rp(n1, n0, cos1, cos0) * rp(n1, n2, cos1, cos2); // rho_10 * rho_12 (p-polarized)
+
+			double beta_s = ts(n0, n1, cos0, cos1) * ts(n1, n2, cos1, cos2); // tau_01 * tau_12 (s-polarized)
+			double beta_p = tp(n0, n1, cos0, cos1) * tp(n1, n2, cos1, cos2); // tau_01 * tau_12 (p-polarized)
+
+			// compute the phase term (phi)
+			double phi = (2 * pi / r_in.lambda()) * (2 * n1 * thickness * cos1) + delta;
+
+			// finally, evaluate the transmitted intensity for the two possible polarizations
+			double ts = pow(beta_s, 2) / (pow(alpha_s, 2) - 2 * alpha_s * cos(phi) + 1);
+			double tp = pow(beta_p, 2) / (pow(alpha_p, 2) - 2 * alpha_p * cos(phi) + 1);
+
+			// we need to take into account conservation of energy for transmission
+			double beamRatio = (n2 * cos2) / (n0 * cos0);
+
+			// calculate the average transmitted intensity (if you know the polarization distribution of your
+			// light source, you should specify it here. if you don't, a 50%/50% average is generally used)
+			t = beamRatio * (ts + tp) / 2;
+		}
+
+		if (random_double() < t) 
+		{
+			// transmission using the underlying material
+			return underlying->scatter(r_in, rec, attenuation, scattered);
+		}
+		else
+		{ //reflection
+			vec3 reflected = reflect(glm::normalize(r_in.direction()), rec.normal);
+			scattered = ray(rec.p, reflected, r_in.lambda());
+			attenuation = albedo;
+			return true;
+		}
+	}
+private:
+	color albedo;
+	double thickness;
+	double n1;
+	const shared_ptr<material> underlying;
+	double rs(double n1, double n2, double cosI, double cosT) const {
+		return (n1 * cosI - n2 * cosT) / (n1 * cosI + n2 * cosT);
 	}
 
-	static double ri_at_lambda(double ri, double disp, double wavelength) {
-		return ri + (disp / wavelength);
+	/* Amplitude reflection coefficient (p-polarized) */
+	double rp(double n1, double n2, double cosI, double cosT) const {
+		return (n2 * cosI - n1 * cosT) / (n1 * cosT + n2 * cosI);
+	}
+
+	/* Amplitude transmission coefficient (s-polarized) */
+	double ts(double n1, double n2, double cosI, double cosT) const {
+		return 2 * n1 * cosI / (n1 * cosI + n2 * cosT);
+	}
+
+	/* Amplitude transmission coefficient (p-polarized) */
+	double tp(double n1, double n2, double cosI, double cosT) const {
+		return 2 * n1 * cosI / (n1 * cosT + n2 * cosI);
 	}
 };

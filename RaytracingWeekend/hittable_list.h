@@ -8,7 +8,8 @@
 class hittable_list : public hittable {
 public:
 	hittable_list() {}
-	hittable_list(shared_ptr<hittable> object) { add(object); }
+	hittable_list(shared_ptr<hittable> object) :objects{} { add(object); }
+	hittable_list(std::vector<shared_ptr<hittable>>::iterator begin, size_t n) :objects{} { std::copy_n(begin, n, std::back_inserter(objects)); }
 
 	void clear() {
 		objects.clear();

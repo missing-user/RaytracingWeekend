@@ -10,17 +10,10 @@
 class bvh_node : public hittable {
 public:
     bvh_node() {};
-    bvh_node(std::vector<shared_ptr<hittable>>& src_objects, size_t start, size_t end);
-
-    bvh_node(
-        const std::vector<shared_ptr<hittable>>& src_objects,
-        size_t start, size_t end);
+    bvh_node(std::vector<shared_ptr<hittable>>::iterator, std::vector<shared_ptr<hittable>>::iterator);
 
     bvh_node(hittable_list& list)
-        : bvh_node(list.objects, 0, list.objects.size())
-    {}
-    bvh_node(const hittable_list& list)
-        : bvh_node(list.objects, 0, list.objects.size())
+        : bvh_node(list.objects.begin(), list.objects.end())
     {}
 
     virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
@@ -59,7 +52,7 @@ inline bool box_compare(const shared_ptr<hittable> a, const shared_ptr<hittable>
 }
 
 
-inline double pair_axis_dist(const std::pair<std::vector<shared_ptr<hittable>>::iterator, std::vector<shared_ptr<hittable>>::iterator> p, int axis) {
+inline double pair_axis_dist(std::pair<std::vector<shared_ptr<hittable>>::iterator, std::vector<shared_ptr<hittable>>::iterator> p, int axis) {
     aabb box_a;
     aabb box_b;
     auto a = *p.first;
@@ -84,16 +77,12 @@ bool box_z_compare(const shared_ptr<hittable>& a, const shared_ptr<hittable>& b)
     return box_compare(a, b, 2);
 }
 
-bvh_node::bvh_node(std::vector<shared_ptr<hittable>>& src_objects,
-    size_t start, size_t end) {
-    auto &objects = src_objects; // Create a modifiable array of the source scene objects
-
-
+bvh_node::bvh_node(std::vector<shared_ptr<hittable>>::iterator start, std::vector<shared_ptr<hittable>>::iterator end) {
     // select the largest axis to split the bvh
     int axis;
-    auto minmax_x = std::minmax_element(objects.begin() + start, objects.begin() + end, box_x_compare);
-    auto minmax_y = std::minmax_element(objects.begin() + start, objects.begin() + end, box_y_compare);
-    auto minmax_z = std::minmax_element(objects.begin() + start, objects.begin() + end, box_z_compare);
+    auto minmax_x = std::minmax_element(start, end, box_x_compare);
+    auto minmax_y = std::minmax_element(start, end, box_y_compare);
+    auto minmax_z = std::minmax_element(start, end, box_z_compare);
 
     if (pair_axis_dist(minmax_x, 0) > std::fmax(pair_axis_dist(minmax_y, 1), pair_axis_dist(minmax_z, 2))) {
         axis = 0;
@@ -114,26 +103,34 @@ bvh_node::bvh_node(std::vector<shared_ptr<hittable>>& src_objects,
 
     //how many objects does this node contain?
     size_t object_span = end - start;
+    auto mid = start + object_span / 2;
+    std::partial_sort(start, mid, end, comparator);
 
-    if (object_span == 1) {
-        left = right = objects[start];
+    /*if (object_span == 1) {
+        left = right = *start;
     }
     else if (object_span == 2) {
-        if (comparator(objects[start], objects[start + 1])) {
-            left = objects[start];
-            right = objects[start + 1];
+        if (comparator(*start, *(start + 1))) {
+            left = *start;
+            right = *(start + 1);
         }
         else {
-            left = objects[start + 1];
-            right = objects[start];
+            left = *(start + 1);
+            right = *start;
         }
     }
     else {
-        std::sort(objects.begin() + start, objects.begin() + end, comparator);
+        left = make_shared<bvh_node>(start, mid);
+        right = make_shared<bvh_node>(mid, end);
+    }*/
 
-        auto mid = start + object_span / 2;
-        left = make_shared<bvh_node>(objects, start, mid);
-        right = make_shared<bvh_node>(objects, mid, end);
+    // Terminate subdivision at a certain point
+    if (object_span <= 16) {
+        left = make_shared<hittable_list>(start, mid - start);
+        right = make_shared<hittable_list>(mid, end - mid);
+    }else{
+        left = make_shared<bvh_node>(start, mid);
+        right = make_shared<bvh_node>(mid, end);
     }
 
     aabb box_left, box_right;
