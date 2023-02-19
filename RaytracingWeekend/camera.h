@@ -2,6 +2,16 @@
 
 #include "rtweekend.h"
 
+struct camera_settings {
+    point3 lookfrom;
+    point3 lookat;
+
+    double aperture = 0;
+    double vfov = 20.;
+
+    vec3 vup{ 0, 1, 0 };
+};
+
 class camera {
 public:
     camera(point3 lookfrom, point3 lookat, vec3 vup,
@@ -29,6 +39,16 @@ public:
         vertical = focus_dist*viewport_height * v;
         left_corner = origin - horizontal / 2.0 - vertical / 2.0 - w * focus_dist;
 	}
+
+    camera(camera_settings sett, const int horizontal_resolution) : camera(
+        sett.lookfrom,
+        sett.lookat,
+        sett.vup,
+        sett.vfov,
+        sett.aperture,
+        glm::distance(sett.lookfrom, sett.lookat),
+        horizontal_resolution)
+    {}
 
     ray get_ray(double s, double t) const {
         vec3 rd = lens_radius * random_in_unit_disk();

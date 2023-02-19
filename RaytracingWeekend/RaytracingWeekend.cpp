@@ -33,19 +33,11 @@ int main(int argc, char* argv[])
     const std::string filename = get_filename(argc, argv);
 
     //Camera Settings
-    point3 lookfrom(13, 6, 0);
-    point3 lookat(0, 0, 0);
-    vec3 vup(0, 1, 0);
-    double dist_to_focus = 10.0;
-    auto aperture = 0.2;
-    double vfov = 20.;
-
-    dist_to_focus = 12.0;
-
-    camera cam(lookfrom, lookat, vup, vfov, aperture, dist_to_focus, 720);
+    camera_settings camset{ {13, 6, 0 }, {0,0,0} };
+    camera cam(camset, 720);
 
     //Render
-    threaded_renderer renderer(cam.image_width, cam.image_height, 32, 1000, 50);
+    threaded_renderer renderer(cam.image_width, cam.image_height, 32, 1000, 32);
     preview_gui gui(filename, cam.image_width, cam.image_height);
 
     std::cerr << "Initializing Scene" << std::endl;
