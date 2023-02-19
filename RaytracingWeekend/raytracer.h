@@ -1,6 +1,7 @@
 #pragma once
 
 #include <thread>
+#include <atomic>
 #include <chrono>
 #include <iostream>
 
@@ -50,7 +51,7 @@ static color ray_color(const ray& r, const hittable& h, int depth) {
     return ( (1.0 - t) * color(1.0, 1.0, 1.0) + t * color(0.5, 0.7, 1.0)); // sky color
 }
 
-static void render_tile(vector<color>& output, const hittable& world, const unsigned int sample_count, const int max_depth, const camera& cam, const tile tile) {
+static void render_tile(vector<color>& output, const hittable& world, const std::size_t sample_count, const int max_depth, const camera& cam, const tile tile) {
 
     //for rendering a single tile on a thread
     for (int i = tile.x_end - 1; i >= tile.x; --i)
@@ -59,27 +60,28 @@ static void render_tile(vector<color>& output, const hittable& world, const unsi
         {
             color pixel_color{0,0,0};
             double total_weight = 0.;
-
-            for (unsigned int s = 0; s < sample_count; ++s)
+                            
+            for (std::size_t s = 0; s < sample_count; ++s)
             {
                 vec3 sample = sample_pixel(i, j, cam.image_width, cam.image_height, s);
                 total_weight += sample.z;
 
                 ray r = cam.get_ray(sample.x, sample.y);
-
 #ifdef DISPERSION
-                r.wavelength = random_double(lambda_start, lambda_end);
+                auto lambda_weight_pair = random_wavelength(s, sample_count);
+                r = { r, lambda_weight_pair.first };
 #endif // DISPERSION
 
-                color sample_color{0,0,0};
+                color sample_color = ray_color(r, world, max_depth);
 #ifdef DEBUG_DEPTH
                 sample_color = color(1, 1, 1) - (ray_color(r, world, max_depth) / max_depth);
 #else
-                sample_color = ray_color(r, world, max_depth) * sample.z;
+                sample_color *= sample.z; // Weight for the pixel sample position
 #endif // DEBUG_DEPTH
 
 #ifdef DISPERSION
-                sample_color = sample_color * lambda_to_rgb(r.wavelength) * plancks_law(r.wavelength, 7200) / plancks_law(white_wavelength, 5500);
+                sample_color *= lambda_to_rgb(r.lambda());
+                sample_color *= lambda_weight_pair.second; // Weight for the wavelength sample
 #endif // DISPERSION
 
                 pixel_color += sample_color;
@@ -90,9 +92,7 @@ static void render_tile(vector<color>& output, const hittable& world, const unsi
 }
 
 static void consume_tiles(vector<color>& output, const hittable& world, int sample_count, int max_depth, const camera& cam, const vector<tile>& tiles, std::atomic_int& tile_id, std::atomic_int& finished_threads) {
-    while (true) {
-        if (tile_id >= tiles.size())
-            break; //the queue is empty/tile is invalid, exit the thread
+    while (tile_id < tiles.size()) { //the queue is empty/tile is invalid, exit the thread
         const tile next = tiles[tile_id++];
         render_tile(output, world, sample_count, max_depth, cam, next);
     }

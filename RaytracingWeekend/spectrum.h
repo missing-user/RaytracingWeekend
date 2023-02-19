@@ -13,7 +13,7 @@ https://github.com/mmp/pbrt-v3/blob/aaa552a4b9cbf9dccb71450f47b268e0ed6370e2/src
 const size_t nCIESamples = 471;
 const double lambda_start = 360;
 const double lambda_end = lambda_start + nCIESamples;
-const double white_wavelength = (lambda_end + lambda_start) / 2;
+const double white_wavelength = (lambda_end + lambda_start) / 2.0;
 
 #pragma region CIE_LUTs
 
@@ -769,10 +769,6 @@ const double CIE_lambda[nCIESamples] = {
 
 #pragma endregion
 
-double lerp(double v1, double v2, double percent) {
-    return v1 * (1 - percent) + v2 * percent;
-}
-
 color XYZToRGB(const color& xyz) {
     color rgb{
         3.240479 * xyz[0] - 1.537150 * xyz[1] - 0.498535 * xyz[2],
@@ -790,29 +786,55 @@ color lambda_to_xyz(double wavelength) {
 
     double fractional = wavelength - static_cast<unsigned int>(wavelength);
 
-    double x = lerp(CIE_X[index], CIE_X[index2], fractional);
-    double y = lerp(CIE_Y[index], CIE_Y[index2], fractional);
-    double z = lerp(CIE_Z[index], CIE_Z[index2], fractional);
+    double x = glm::mix(CIE_X[index], CIE_X[index2], fractional);
+    double y = glm::mix(CIE_Y[index], CIE_Y[index2], fractional);
+    double z = glm::mix(CIE_Z[index], CIE_Z[index2], fractional);
     return vec3(x, y, z);
 }
 
+color lambda_to_rgb(double wavelength) {
+    auto xyz = lambda_to_xyz(wavelength);
+    return  XYZToRGB(xyz);
+}
+
+double wien_displacement_law(double temperature) {
+    return 2.897771955e6/temperature;//2.897771955e-3 K m -> 2.897771955e6 K nm
+}
+
 // TODO: This should be constexpr
-constexpr double plancks_law(const double wavelength, const double temperature) {
+double plancks_law(const double wavelength, const double temperature) {
     //return the spectral intensity at a given wavelength
     constexpr double h = 6.626e-34 * 1e9;//correction for nm
     constexpr double kb = 1.381e-23;
     constexpr double c = 299792458;
+    
+    constexpr double numerator = 2 * h * c * c; //1.191030362862030736528 × 10^-7
+    constexpr double expo = h * c / kb;
 
-    constexpr double numerator = 2 * h * c * c;
-    const double expo = h * c / kb / temperature;
-
-    auto pow2 = (wavelength * 1e-6) * (wavelength * 1e-6);
+    auto pow2 = wavelength * wavelength * 1e-12;
     auto pow4 = pow2 * pow2;
 
-    return numerator / (pow4 * wavelength * (std::exp(expo / wavelength) - 1));
+    return numerator / (pow4 * wavelength * (std::exp(expo / wavelength / temperature) - 1));
 }
 
-color lambda_to_rgb(double wavelength) {
-    auto xyz = lambda_to_xyz(wavelength); 
-    return  XYZToRGB(xyz);
+inline std::pair<double ,double> random_wavelength(std::size_t current, std::size_t seq_length) {
+    // Generate wavelengths distributed according to planck using the rejection method
+    // TODO: this should be constexpr
+    const double temperature = 6800.0;
+    auto max_intensity = plancks_law(wien_displacement_law(temperature), temperature);
+
+    auto lambda = random_double(lambda_start, lambda_end); // replace by sobol sequence
+    auto intensity = random_double(0, max_intensity);
+
+    // Generate new samples until one falls within the pdf
+    while (intensity > plancks_law(lambda, temperature)) {
+        lambda = random_double(lambda_start, lambda_end);
+        intensity = random_double(0, max_intensity);
+    }
+    return std::make_pair(lambda, 1);
+
+    // Alternatively: go through all wavelengths in regular intervals
+    // Then the samples must be weighted by plancks_law(lambda, temperature)/plancks_law(wien_displacement_law(temperature), temperature) at the end
+    lambda = glm::mix(lambda_start, lambda_end, static_cast<double>(current) / static_cast<double>(seq_length));
+    return std::make_pair(lambda, plancks_law(lambda, temperature) / max_intensity);
 }
