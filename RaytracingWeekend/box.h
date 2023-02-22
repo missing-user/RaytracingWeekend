@@ -12,7 +12,6 @@ constexpr size_t Right = 5;
 
 class box : public hittable {
 public:
-    box() {}
     box(const point3& p0, const point3& p1, shared_ptr<material> ptr) : box_min(p0), box_max(p1), mat_ptr(ptr) {
         bounding_box(_aabb);
     }
@@ -102,11 +101,10 @@ public:
         const double nearest_t = nearest.first;
         const size_t nearest_i = nearest.second;
 
-
         const vec3 face_normals[6]{
-            vec3(0, 0, 1), vec3(0, 0, 1),           // Back & Front
-            vec3(0, 1, 0), vec3(0, 1, 0),           // Top & Bottom
-            vec3(1, 0, 0), vec3(1, 0, 0),           // Left & Right
+            vec3(0, 0, 1), vec3(0, 0, -1),           // Back & Front
+            vec3(0, 1, 0), vec3(0, -1, 0),           // Top & Bottom
+            vec3(1, 0, 0), vec3(-1, 0, 0),           // Left & Right
         };
 
         // Setup the rest of the hit record
@@ -173,8 +171,8 @@ rotate_y::rotate_y(shared_ptr<hittable> p, double angle) : ptr(p) {
                 vec3 tester(newx, y, newz);
 
                 for (int c = 0; c < 3; c++) {
-                    min[c] = fmin(min[c], tester[c]);
-                    max[c] = fmax(max[c], tester[c]);
+                    min[c] = std::min(min[c], tester[c]);
+                    max[c] = std::max(max[c], tester[c]);
                 }
             }
         }
