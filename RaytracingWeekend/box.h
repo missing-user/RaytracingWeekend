@@ -3,12 +3,12 @@
 #include "quad.h"
 
 // These are indicies that are used in my method for Box::hit()
-constexpr size_t Back = 0;
-constexpr size_t Front = 1;
-constexpr size_t Top = 2;
-constexpr size_t Bottom = 3;
-constexpr size_t Left = 4;
-constexpr size_t Right = 5;
+constexpr short Back = 0;
+constexpr short Front = 1;
+constexpr short Top = 2;
+constexpr short Bottom = 3;
+constexpr short Left = 4;
+constexpr short Right = 5;
 
 class box : public hittable {
 public:
@@ -86,7 +86,7 @@ public:
 
         // Create an array,  If that side was hit, use it's `t` if not, set that to infinity.
         //   then we use `std::min()` to find the miniumum `t` (i.e. closest) value.
-        using IndexedHit = std::pair<double, size_t>;
+        using IndexedHit = std::pair<double, short>;
         const IndexedHit nearest = std::min({
                 std::make_pair((did_hit[Back] ? t[Back] : infinity), Back),
                 std::make_pair((did_hit[Front] ? t[Front] : infinity), Front),
@@ -99,7 +99,7 @@ public:
         );
 
         const double nearest_t = nearest.first;
-        const size_t nearest_i = nearest.second;
+        const short nearest_i = nearest.second;
 
         const vec3 face_normals[6]{
             vec3(0, 0, 1), vec3(0, 0, -1),           // Back & Front
@@ -150,7 +150,7 @@ private:
 };
 
 rotate_y::rotate_y(shared_ptr<hittable> p, double angle) : ptr(p) {
-    auto radians = degrees_to_radians(angle);
+    auto radians = glm::radians(angle);
     sin_theta = sin(radians);
     cos_theta = cos(radians);
     hasbox = ptr->bounding_box(bbox);
@@ -192,7 +192,7 @@ bool rotate_y::hit(const ray& r, double t_min, double t_max, hit_record& rec) co
     direction[0] = cos_theta * r.direction()[0] - sin_theta * r.direction()[2];
     direction[2] = sin_theta * r.direction()[0] + cos_theta * r.direction()[2];
 
-    ray rotated_r(origin, direction);
+    ray rotated_r(origin, direction, r.lambda());
 
     if (!ptr->hit(rotated_r, t_min, t_max, rec))
         return false;

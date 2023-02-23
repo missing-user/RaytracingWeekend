@@ -55,14 +55,16 @@ hittable_list obj(std::string filename, std::shared_ptr<material> mat) {
             vertexIndices.push_back(vertexIndex[0]);
             vertexIndices.push_back(vertexIndex[1]);
             vertexIndices.push_back(vertexIndex[2]);
+            normalIndices.push_back(normalIndex[0]);
+            normalIndices.push_back(normalIndex[1]);
+            normalIndices.push_back(normalIndex[2]);
+
             my_tris.add(make_shared<triangle>(
                 temp_vertices[vertexIndex[0] - 1], 
                 temp_vertices[vertexIndex[1] - 1], 
                 temp_vertices[vertexIndex[2] - 1], 
+                temp_normals[normalIndex[0]-1],
                 mat));
-            normalIndices.push_back(normalIndex[0]);
-            normalIndices.push_back(normalIndex[1]);
-            normalIndices.push_back(normalIndex[2]);
         }
     }
     std::cerr << "Loaded Mesh with "<< my_tris.objects.size() << " triangles and " << vertexIndices.size()<< " vertecies" << std::endl;

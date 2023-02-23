@@ -46,9 +46,10 @@ inline bool box_compare(const shared_ptr<hittable> a, const shared_ptr<hittable>
     aabb box_b;
 
     if (!a->bounding_box(box_a) || !b->bounding_box(box_b))
-        std::cerr << "No bounding box in bvh_node constructor.\n";
+        throw("No bounding box in bvh_node constructor.\n");
 
-    return box_a.min()[axis] < box_b.min()[axis];
+    // Sort by centroid
+    return box_a.min()[axis]+box_a.max()[axis] < box_b.min()[axis]+box_b.max()[axis]; 
 }
 
 
@@ -59,7 +60,7 @@ inline double pair_axis_dist(std::pair<std::vector<shared_ptr<hittable>>::iterat
     auto b = *p.second;
 
     if (!a->bounding_box(box_a) || !b->bounding_box(box_b))
-        std::cerr << "No bounding box in bvh_node constructor.\n";
+        throw("No bounding box in bvh_node constructor.\n");
 
     return box_b.max()[axis] - box_a.min()[axis];
 }
@@ -125,7 +126,7 @@ bvh_node::bvh_node(std::vector<shared_ptr<hittable>>::iterator start, std::vecto
     }*/
 
     // Terminate subdivision at a certain point
-    if (object_span <= 16) {
+    if (object_span <= 8) {
         left = make_shared<hittable_list>(start, mid - start);
         right = make_shared<hittable_list>(mid, end - mid);
     }else{

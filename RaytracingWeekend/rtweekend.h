@@ -8,32 +8,23 @@
 typedef glm::highp_dvec3 vec3;
 typedef vec3 point3;
 
+#include <random>
 #include <memory>
-#include "prng.h"
-#include "spectrum.h"
-#include "ray.h"
 #include "pcg_extras.hpp"
 #include "pcg_random.hpp"
 #include "pcg_uint128.hpp"
 
 //#define EXR_SUPPORT
-//#define DEBUG_DEPTH
 //#define DISPERSION
+#define LAMBERT_BEER
 
-
-static thread_local smallprng::knuth_lcg prng;
-static thread_local std::mt19937 twister;
-static thread_local pcg32_fast pcgrng;
+static thread_local std::mt19937 twister{};
+static thread_local pcg32_fast pcgrng{};
+#define RANDOM twister //select the active random
 
 // random distribution
 static std::uniform_real_distribution<double> dis(0.0, 1.0);
-
-#define RANDOM_32BIT static_cast<double>(prng.randf())
-#define RANDOM_64BIT prng.rand()
-#define RANDOM_TWISTER dis(twister)
-#define RANDOM_PCG dis(pcgrng)
-
-#define RANDOM RANDOM_64BIT //select the active random
+static std::normal_distribution<double> normal_dis(0., .2);
 
 // Usings
 using std::shared_ptr;
@@ -49,10 +40,6 @@ const double pi = 3.1415926535897932385;
 const double aspect_ratio = 16.0 / 9.0;
 
 // Utility Functions
-inline double degrees_to_radians(const double degrees) {
-    return degrees * pi / 180.0;
-}
-
 inline double clamp(const double x, const double min=0, const double max=1) {
     if (x > max)
         return max;
@@ -62,17 +49,16 @@ inline double clamp(const double x, const double min=0, const double max=1) {
 }
 
 inline double random_double() {
-    return RANDOM;
+    return dis(RANDOM);
 }
 
-
 int random_int(const int min, const int max) {
-    auto tmpprng = smallprng::knuth_lcg();
-    return (tmpprng() % (max - min)) + min;
+    return (RANDOM() % (max - min)) + min;
 }
 
 double random_normal_double() {
-    return prng.rand_normal(0., .2);
+
+    return normal_dis(RANDOM);
     //return prng.rand_normal();
 }
 
@@ -108,3 +94,6 @@ vec3 random_in_unit_disk() {
 vec3 random_unit_vector() {
     return glm::normalize(random_in_unit_sphere());
 }
+
+#include "spectrum.h"
+#include "ray.h"

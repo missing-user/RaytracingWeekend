@@ -19,40 +19,47 @@ struct tile {
     tile() : x(0), y(0), x_end(0), y_end(0) {};
 };
 
-static color ray_color(const ray& r, const hittable& h, int depth) {
-    hit_record rec;
-    if (depth <= 0)
-        return color{0,0,0};
+color ray_color(const ray& r, const hittable& h, int depth, glm::fvec3& normal) {
+    color result{ 0, 0, 0 };
+    vec3 attenuation{ 1, 1, 1 };
+    normal = { 0,-1,0 }; // set normal to a sensible default for rays that didn't hit anything
+    ray current_ray = r;
 
-    
-    if (h.hit(r, global_t_min, infinity, rec)) {
-        ray scattered;
-        color attenuation;
-        color emitted = rec.mat_ptr->emitted(r, rec);
+    bool hitDiffuse = false;
+    for (int i = 0; i < depth; i++) {
+        hit_record rec;
 
-        if (rec.mat_ptr->scatter(r, rec, attenuation, scattered)){
-            #ifdef DEBUG_DEPTH
-            attenuation = color(1, 1, 1);
-            #endif
-            return emitted + ray_color(scattered, h, depth - 1) * attenuation;
+        if (h.hit(current_ray, global_t_min, infinity, rec)) {
+            // We hit an object, update color based on emission and attenuation
+            color emitted = rec.mat_ptr->emitted(current_ray, rec);
+            ray scattered;
+
+            // Store the normal of the first diffuse/opaque ray hit
+            if (!hitDiffuse && (dynamic_cast<dielectric*>(rec.mat_ptr) == nullptr) && (dynamic_cast<thinfilm*>(rec.mat_ptr) == nullptr)) {
+                normal = rec.normal;
+                hitDiffuse = true;
+            }
+
+            if (rec.mat_ptr->scatter(current_ray, rec, attenuation, scattered)) {
+                result += emitted * attenuation;
+                current_ray = scattered;
+            } else {
+                return result + emitted * attenuation;
+            }
+        } else {
+            // Background color / sky sphere
+            vec3 unit_direction = glm::normalize(current_ray.direction());
+            auto t = 0.5 * (unit_direction.y + 1.0);
+            result += attenuation * ((1.0 - t) * color(1.0, 1.0, 1.0) + t * color(0.5, 0.7, 1.0));
+            return result;
         }
-        #ifndef DEBUG_DEPTH
-        return emitted;
-        #endif
     }
 
-    #ifdef DEBUG_DEPTH
-    return color(depth, depth, depth);
-    #endif
-
-    //return color{0,0,0};
-    vec3 unit_direction = glm::normalize(r.direction());
-    auto t = 0.5 * (unit_direction.y + 1.0);
-    return ( (1.0 - t) * color(1.0, 1.0, 1.0) + t * color(0.5, 0.7, 1.0)); // sky color
+    // Exceeded ray depth
+    return result = { 0,0,0 };
 }
 
-static void render_tile(vector<color>& output, const hittable& world, const std::size_t sample_count, const int max_depth, const camera& cam, const tile tile) {
-
+void render_tile(vector<color>& output, vector<glm::fvec3>& output_normal, const hittable& world, const std::size_t sample_count, const int max_depth, const camera& cam, const tile tile) {
     //for rendering a single tile on a thread
     for (int i = tile.x_end - 1; i >= tile.x; --i)
     {
@@ -71,13 +78,9 @@ static void render_tile(vector<color>& output, const hittable& world, const std:
                 auto lambda_weight_pair = random_wavelength(s, sample_count);
                 r = { r, lambda_weight_pair.first };
 #endif // DISPERSION
-
-                color sample_color = ray_color(r, world, max_depth);
-#ifdef DEBUG_DEPTH
-                sample_color = color(1, 1, 1) - (ray_color(r, world, max_depth) / max_depth);
-#else
+                color sample_color = ray_color(r, world, max_depth, output_normal[j * cam.image_width + i]);
+                //sample_color = output_normal[j * cam.image_width + i];
                 sample_color *= sample.z; // Weight for the pixel sample position
-#endif // DEBUG_DEPTH
 
 #ifdef DISPERSION
                 sample_color *= lambda_to_rgb(r.lambda());
@@ -91,10 +94,10 @@ static void render_tile(vector<color>& output, const hittable& world, const std:
     }
 }
 
-static void consume_tiles(vector<color>& output, const hittable& world, int sample_count, int max_depth, const camera& cam, const vector<tile>& tiles, std::atomic_int& tile_id, std::atomic_int& finished_threads) {
+void consume_tiles(vector<color>& output, vector<glm::fvec3> &output_normal, const hittable& world, int sample_count, int max_depth, const camera& cam, const vector<tile>& tiles, std::atomic_int& tile_id, std::atomic_int& finished_threads) {
     while (tile_id < tiles.size()) { //the queue is empty/tile is invalid, exit the thread
         const tile next = tiles[tile_id++];
-        render_tile(output, world, sample_count, max_depth, cam, next);
+        render_tile(output, output_normal, world, sample_count, max_depth, cam, next);
     }
     ++finished_threads;
 }
@@ -105,6 +108,7 @@ private:
     void create_tiles() {
         const int x_tiles = width / tile_size;
         const int y_tiles = height / tile_size;
+        tiles.clear();
         tiles.reserve((x_tiles + 1) * (y_tiles + 1));
 
         for (int tx = 0; tx < x_tiles; ++tx)
@@ -127,39 +131,55 @@ private:
 
 public:
     threaded_renderer(const int width, const int height, const int tile_size = 32, int sample_count = 100, int max_depth = 50) :
-        width(width), height(height), tile_size(tile_size),
+        width(width), height(height), 
+        pixels({ static_cast<size_t>(width * height) }),
+        pixels_normal({ static_cast<size_t>(width * height) }),
+        tile_size(tile_size),
         sample_count(sample_count), max_depth(max_depth),
         num_threads(std::thread::hardware_concurrency())
-    {}
+    {
+        create_tiles(); // these are the jobs for the thread pool
+    }
 
     double get_percentage() const {
         return tile_id / static_cast<double>(tiles.size());
     }
 
-    void render(hittable& world, camera& cam) {
-        std::cerr << "Starting render with " << sample_count << " samples and " << max_depth << " bounces at " << width << "x" << height << std::endl;
-        create_tiles(); // these are the jobs for the thread pool
+    void stop_render() {
+        for (auto &t : threads)
+            t.join();
+        threads.clear();
+        finished_threads = 0;
+        tile_id = 0;
 
+        // Show the previous frame grayed out
+        std::transform(pixels.begin(), pixels.end(), pixels.begin(), [](auto& c) {return c * 0.33; });
+        //std::fill(pixels.begin(), pixels.end(), color(0, 0, 0));
+    }
+
+    void render(hittable& world, camera& cam) {
+        stop_render();
+        std::cerr << "Starting render with " << sample_count << " samples and " << max_depth << " bounces at " << width << "x" << height << std::endl;
+        
         // create the threads for our pool, each one will independently take tiles from the queue and render them one by one until the queue is empty
-        threads.reserve(num_threads);
+        threads.resize(num_threads);
 
         for (int i = 0; i < std::min(num_threads, (int)tiles.size()); ++i)
         {
-            threads.push_back(
-                std::thread(
+            threads[i] = std::thread(
                     consume_tiles,
                     ref(pixels), 
+                    ref(pixels_normal),
                     ref(world), 
                     sample_count, 
                     max_depth, 
                     ref(cam),
                     ref(tiles),
                     ref(tile_id),
-                    ref(finished_threads))
-            );
+                    ref(finished_threads));
             //threads[i].detach();
         }
-        std::cerr << "Created " << threads.size() << " rendering threads" << std::endl;
+        std::cerr << "Created " << threads.size() << " rendering threads\n";
     }
 
     bool finished() const {
@@ -168,8 +188,9 @@ public:
 public:
     const int width, height;
     const int num_threads;
-    int tile_size, sample_count, max_depth;
-    vector<color> pixels{ width * height };
+    const int tile_size, sample_count, max_depth;
+    vector<color> pixels;
+    vector<glm::fvec3> pixels_normal;
 private:
     vector<std::thread> threads;
     vector<tile> tiles;

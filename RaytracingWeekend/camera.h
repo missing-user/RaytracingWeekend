@@ -19,7 +19,7 @@ public:
         double aperture,
         double focus_dist,
         const int horizontal_resolution
-        ) : image_width(horizontal_resolution), image_height(static_cast<int>(horizontal_resolution / aspect_ratio))
+        ) : image_width(horizontal_resolution), image_height(static_cast<int>(horizontal_resolution / aspect_ratio)), focus_dist(focus_dist)
      {
         //Camera orientation
         w = glm::normalize(lookfrom - lookat);
@@ -27,7 +27,7 @@ public:
         v = cross(w, u);
 
         //Camera Projection Plane
-        auto theta = degrees_to_radians(vfov);
+        auto theta = glm::radians(vfov);
         auto h = tan(theta / 2);
         const double viewport_height = 2.0*h;
         const double viewport_width = viewport_height * aspect_ratio;
@@ -50,10 +50,18 @@ public:
         horizontal_resolution)
     {}
 
+    void move(vec3 movement) {
+        origin += u * movement.x + v * movement.y + w * movement.z;
+        left_corner = origin - horizontal / 2.0 - vertical / 2.0 - w * focus_dist;
+    }
+
     ray get_ray(double s, double t) const {
         vec3 rd = lens_radius * random_in_unit_disk();
         vec3 offset = u * rd.x + v * rd.y;
-        return ray(origin+offset, left_corner + horizontal * s + vertical * t - origin-offset);
+        return ray(origin+offset, left_corner + horizontal * s + vertical * t - origin-offset, white_wavelength);
+    }
+    ray get_mouse_ray(double s, double t) const {
+        return ray(origin, left_corner + horizontal * s + vertical * t - origin, white_wavelength);
     }
 private:
     vec3 origin;
@@ -61,6 +69,7 @@ private:
     vec3 vertical;
     vec3 u, v, w;
     double lens_radius;
+    double focus_dist;
     point3 left_corner;
 public:
     //Image

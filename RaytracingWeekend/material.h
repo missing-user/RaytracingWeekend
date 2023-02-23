@@ -20,7 +20,7 @@ public:
 		if (glm::all(glm::epsilonEqual(scatter_direction, vec3(0,0,0), global_t_min))) scatter_direction = rec.normal;
 
 		scattered = ray(rec.p, scatter_direction, r_in.lambda());
-		attenuation = albedo;
+		attenuation *= albedo;
 		return true;
 	}
 
@@ -38,7 +38,7 @@ public:
 		if (glm::all(glm::epsilonEqual(scatter_direction, vec3(0, 0, 0), global_t_min))) scatter_direction = rec.normal;
 
 		scattered = ray(rec.p, scatter_direction, r_in.lambda());
-		attenuation = albedo;
+		attenuation *= albedo;
 		return true;
 	}
 
@@ -79,33 +79,36 @@ public:
 	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
 		vec3 reflected = reflect(glm::normalize(r_in.direction()), rec.normal);
 		scattered = ray(rec.p, reflected + fuzz * random_in_unit_sphere(), r_in.lambda());
-		attenuation = albedo;
+		attenuation *= albedo;
 		return dot(scattered.direction(), rec.normal) > 0;
 	}
 	color albedo;
 	double fuzz;
 };
 
-class isotropic : public material {
+class anisotropic : public material {
 //useful for smoke and stuff, interesting material 
 public:
-	isotropic(color c) : albedo(c) {}
+	anisotropic(color a) : albedo(a), anisotropy(0) {}
+	anisotropic(color a, double anisotropy) : albedo(a), anisotropy(anisotropy) {}
 
-	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered
-	) const override {
-		scattered = ray(rec.p, random_in_unit_sphere());
-		attenuation = albedo;
+	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
+		auto direction = random_in_unit_sphere() + normalize(r_in.direction()) * anisotropy;
+		if (glm::all(glm::epsilonEqual(direction, vec3(0, 0, 0), global_t_min))) direction = rec.normal;
+		scattered = ray(rec.p, direction, r_in.lambda());
+		attenuation *= albedo;
 		return true;
 	}
 
 public:
 	color albedo;
+	double anisotropy;
 };
 
 
 class specular : public material {
 public:
-	specular(const color& a, double f) : albedo(a), fuzz(f < 1 ? f : 1) {}
+	specular(const color& a, double f) : albedo(a), fuzz(f) {}
 	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
 		vec3 scatter_direction;
 		if (random_double() < fuzz) {
@@ -115,7 +118,7 @@ public:
 		else
 			scatter_direction  = glm::reflect(glm::normalize(r_in.direction()), rec.normal);
 		scattered = ray(rec.p, scatter_direction, r_in.lambda());
-		attenuation = albedo;
+		attenuation *= albedo;
 		return dot(scattered.direction(), rec.normal) > 0;
 	}
 	color albedo;
@@ -124,9 +127,8 @@ public:
 
 class dielectric : public material {
 public:
-	dielectric(double refractive_index) : albedo(color(1,1,1)), ri(refractive_index), blur(0.) {}
-	dielectric(const color& a, double refractive_index, double blur=0.) : albedo(a), ri(refractive_index), blur(fabs(blur) < 1 ? blur : 1) {}
-	dielectric(const color& a, double refractive_index, double blur, double disp) : albedo(a), ri(refractive_index), blur(fabs(blur) < 1 ? blur : 1), dispersion(disp) {}
+	dielectric(double refractive_index) : albedo(color(1,1,1)), ri(refractive_index), blur(0.), dispersion(0.044 * 1e3) {}
+	dielectric(const color& a, double refractive_index, double blur = 0., double disp = 0.044 * 1e3) : albedo(a), ri(refractive_index), blur(blur), dispersion(disp) {}
 	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
 
 		#ifdef DISPERSION
@@ -148,17 +150,25 @@ public:
 		}
 		else {
 			direction = refract(in_vec, rec.normal, refraction_ratio);
-			//if (blur > 0)
 			direction += random() * blur;
 		}
-		attenuation = albedo;
+
+#ifdef LAMBERT_BEER
+		if (!rec.front_face) {
+			// We hit a backface (the ray must have travelled through the object)
+			auto ray_length = glm::distance(r_in.origin(), rec.p);
+			attenuation *= exp(-ray_length * (color(1)-albedo));
+		}
+#else
+		attenuation *= albedo;
+#endif
 		scattered = ray(rec.p, direction, r_in.lambda());
 		return true;
 	}
 	color albedo;
 	double ri; // refractive index
 	double blur;
-	double dispersion = 0.044*1e3; // dispersion coefficient in nanometers
+	double dispersion; // dispersion coefficient in nanometers
 private:
 	inline double fastpow5(double input) const {
 		const double a = input * input;
@@ -170,8 +180,6 @@ private:
 		auto r0 = (1 - ref_idx) / (1 + ref_idx);
 		r0 = r0 * r0;
 
-
-
 		return r0 + (1 - r0) * fastpow5(1 - cosine);
 	}
 	
@@ -182,13 +190,20 @@ private:
 
 class thinfilm : public material {
 public:
-	thinfilm(const color& a, double t, double n, const shared_ptr<material> underlying) : albedo(a), thickness(t), n1(n), underlying(underlying) {}
+	thinfilm(const color& a, double t, double n, const shared_ptr<material> underlying = nullptr) : albedo(a), thickness(t), n0(1), n1(n), n2(1), underlying(underlying) {
+		auto innerDielectric = dynamic_cast<dielectric*>(underlying.get());
+		if (innerDielectric != nullptr)
+			n2 = innerDielectric->ri;
+		else {
+			auto innerThinfilm = dynamic_cast<thinfilm*>(underlying.get());
+			if (innerThinfilm != nullptr) {
+				n2 = innerThinfilm->n1;
+				innerThinfilm->n0 = n1;
+			}
+		}
+	}
 	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {		
 		const double cos0 = abs(dot(r_in.direction(), rec.normal));
-
-		const double n0 = 1;
-		const double n2 = 1;
-
 
 		// compute the phase change term (constant)
 		double d10 = (n1 > n0) ? 0 : pi;
@@ -233,21 +248,32 @@ public:
 
 		if (random_double() < t) 
 		{
-			// transmission using the underlying material
-			return underlying->scatter(r_in, rec, attenuation, scattered);
+			auto scatterRes = true;
+			if(underlying == nullptr)
+			{
+				// transmission through air
+				attenuation *= albedo;
+				scattered = ray(rec.p, r_in.direction(), r_in.lambda());
+			}
+			else {
+				// transmission using the underlying material
+				auto scatterRes = underlying->scatter(r_in, rec, attenuation, scattered); 
+				attenuation *= albedo;
+			}
+			return scatterRes;
 		}
 		else
 		{ //reflection
 			vec3 reflected = reflect(glm::normalize(r_in.direction()), rec.normal);
 			scattered = ray(rec.p, reflected, r_in.lambda());
-			attenuation = albedo;
+			attenuation *= albedo;
 			return true;
 		}
 	}
 private:
 	color albedo;
 	double thickness;
-	double n1;
+	double n0, n1, n2;
 	const shared_ptr<material> underlying;
 	double rs(double n1, double n2, double cosI, double cosT) const {
 		return (n1 * cosI - n2 * cosT) / (n1 * cosI + n2 * cosT);
@@ -266,5 +292,19 @@ private:
 	/* Amplitude transmission coefficient (p-polarized) */
 	double tp(double n1, double n2, double cosI, double cosT) const {
 		return 2 * n1 * cosI / (n1 * cosT + n2 * cosI);
+	}
+};
+
+class normal :public material {
+private:
+	double brightness, saturation;
+public:
+	normal(double saturation=1):saturation(saturation), brightness(0.5){}
+	bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
+		return false;
+	}
+	color emitted(const ray& r_in, const hit_record& rec) const override {
+		const vec3 a = (saturation * rec.front_face?rec.normal:-rec.normal) + vec3(brightness);
+		return color(a);
 	}
 };

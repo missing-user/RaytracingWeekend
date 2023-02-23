@@ -11,6 +11,10 @@
 #include "exr_writer.h"
 #endif // EXR_SUPPORT
 
+struct interaction_state{
+    vec3 movement;
+    point3 click;
+};
 
 class preview_gui {
 public:
@@ -30,8 +34,29 @@ public:
             out_uint_pixels[4 * i + 3] = 255u;
         }
     }
+
+    interaction_state get_input(sf::RenderWindow& window) {
+        interaction_state out_s{};
+        out_s.movement.x += sf::Keyboard::isKeyPressed(sf::Keyboard::A);
+        out_s.movement.x -= sf::Keyboard::isKeyPressed(sf::Keyboard::D);
+        out_s.movement.y -= sf::Keyboard::isKeyPressed(sf::Keyboard::Q);
+        out_s.movement.y += sf::Keyboard::isKeyPressed(sf::Keyboard::E);
+        out_s.movement.z -= sf::Keyboard::isKeyPressed(sf::Keyboard::W);
+        out_s.movement.z += sf::Keyboard::isKeyPressed(sf::Keyboard::S);
+
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
+        {
+            sf::Vector2i localPosition = sf::Mouse::getPosition(window);
+            out_s.click = vec3(localPosition.x, localPosition.y, 0);
+            out_s.click.x /= window.getSize().x;
+            out_s.click.y /= window.getSize().y;
+        }
+        return out_s;
+    }
     
-    int open_gui(const threaded_renderer& renderer) {
+    int open_gui(threaded_renderer& renderer, hittable& world, camera& cam) {
+        renderer.render(world, cam);
+
         sf::RenderWindow window(sf::VideoMode(width, height), "Raytracer",
             sf::Style::Default | sf::Style::Close);
         sf::Texture tex;
@@ -46,8 +71,6 @@ public:
 
         tex.setSmooth(false);
         sprite.setTexture(tex);
-
-
 
         bool finished_rendering = false;
 
@@ -64,12 +87,19 @@ public:
             window.display();
 
             if (renderer.finished()) {
-                finished_rendering = true;
+                //finished_rendering = true;
+                renderer.render(world, cam); 
+
+                cam.move(get_input(window).movement);
+                ray r = cam.get_mouse_ray(get_input(window).click.x, get_input(window).click.y);
+                hit_record rec;
+                if (world.hit(r, global_t_min, infinity, rec))
+                    std::cerr << rec.p.x<<" "<<rec.p.y<<" "<<rec.p.z;
             }
 
             std::cerr << "\rProgress: " << std::fixed << std::setprecision(1) << renderer.get_percentage() * 100 << "% "<< std::flush;
 
-            sf::sleep(sf::milliseconds(500));
+            sf::sleep(sf::milliseconds(100));
         }
 
         tex.copyToImage().saveToFile(filename + ".png");
