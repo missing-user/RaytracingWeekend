@@ -5,7 +5,7 @@
 
 class fog :public hittable {
 public:
-	fog(shared_ptr<hittable> b, double density, color a):neg_inv_density(-1 / density), boundary(b), phase_function(make_shared<isotropic>(a)) {
+	fog(shared_ptr<hittable> b, double density, color a):neg_inv_density(-1 / density), boundary(b), phase_function(std::make_shared<anisotropic>(a)) {
 	
 	}
 
