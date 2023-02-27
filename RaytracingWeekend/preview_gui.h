@@ -21,7 +21,7 @@ public:
     preview_gui(std::string filename, const int width, const int height) : filename(filename), width(width), height(height) {};
 
     static void pixels_to_tex(sf::Uint8 *out_uint_pixels, const threaded_renderer& renderer) {
-        const int i_max = renderer.pixels.size();
+        const int i_max = renderer.num_pixels;
         for (int i = 0; i < i_max; i++)
         {
             const auto r = sqrt(renderer.pixels[i_max - i - 1].x );
@@ -54,7 +54,7 @@ public:
         return out_s;
     }
     
-    int open_gui(threaded_renderer& renderer, hittable& world, camera& cam) {
+    int open_gui(threaded_renderer& renderer, hittable** world, camera** cam) {
         renderer.render(world, cam);
 
         sf::RenderWindow window(sf::VideoMode(width, height), "Raytracer",
@@ -72,11 +72,9 @@ public:
         tex.setSmooth(false);
         sprite.setTexture(tex);
 
-        bool finished_rendering = false;
-
-        while (window.isOpen() && !finished_rendering) {
+        while (window.isOpen() && !renderer.finished()) {
             sf::Event event;
-            while (window.pollEvent(event) && !finished_rendering) {
+            while (window.pollEvent(event) && !renderer.finished()) {
                 if (event.type == sf::Event::Closed) window.close();
             }
 
@@ -86,7 +84,7 @@ public:
             window.draw(sprite);
             window.display();
 
-            if (renderer.finished()) {
+            /*if (renderer.finished()) {
                 //finished_rendering = true;
                 renderer.render(world, cam); 
 
@@ -95,7 +93,7 @@ public:
                 hit_record rec;
                 if (world.hit(r, global_t_min, infinity, rec))
                     std::cerr << rec.p.x<<" "<<rec.p.y<<" "<<rec.p.z;
-            }
+            }*/
 
             std::cerr << "\rProgress: " << std::fixed << std::setprecision(1) << renderer.get_percentage() * 100 << "% "<< std::flush;
 

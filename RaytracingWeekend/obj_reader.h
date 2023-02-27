@@ -7,7 +7,7 @@
 #include "hittable.h"
 #include "hittable_list.h"
 
-hittable_list obj(std::string filename, std::shared_ptr<material> mat) {
+hittable_list obj(std::string filename, std::material* mat) {
     std::vector< unsigned int > vertexIndices, normalIndices;
     std::vector< vec3 > temp_vertices;
     std::vector< vec3 > temp_normals;
@@ -59,7 +59,7 @@ hittable_list obj(std::string filename, std::shared_ptr<material> mat) {
             normalIndices.push_back(normalIndex[1]);
             normalIndices.push_back(normalIndex[2]);
 
-            my_tris.add(make_shared<triangle>(
+            my_tris.add(new triangle(
                 temp_vertices[vertexIndex[0] - 1], 
                 temp_vertices[vertexIndex[1] - 1], 
                 temp_vertices[vertexIndex[2] - 1], 

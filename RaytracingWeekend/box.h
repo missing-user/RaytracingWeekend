@@ -12,16 +12,16 @@ constexpr short Right = 5;
 
 class box : public hittable {
 public:
-    box(const point3& p0, const point3& p1, shared_ptr<material> ptr) : box_min(p0), box_max(p1), mat_ptr(ptr) {
+    __device__ box(const point3& p0, const point3& p1, material* ptr) : box_min(p0), box_max(p1), mat_ptr(ptr) {
         bounding_box(_aabb);
     }
 
-    virtual bool bounding_box(aabb& output_box) const override {
+    __device__ virtual bool bounding_box(aabb& output_box) const override {
         output_box = aabb(box_min, box_max);
         return true;
     }
 
-    virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
+    __device__ virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
         //Blatantly copied from https://github.com/define-private-public/PSRayTracing, adapted to fit my architecture
 
         // The `k` values that are used for `Rect` construction
@@ -111,7 +111,7 @@ public:
         rec.t = nearest_t;
         rec.p = r.at(nearest_t);
         rec.set_face_normal(r, face_normals[nearest_i]);
-        rec.mat_ptr = mat_ptr.get();
+        rec.mat_ptr = mat_ptr;
 
         return true;
 
@@ -120,7 +120,7 @@ public:
 public:
     point3 box_min;
     point3 box_max;
-    shared_ptr<material> mat_ptr;
+    material* mat_ptr;
 
 private:
     aabb _aabb;
@@ -131,17 +131,17 @@ private:
 
 class rotate_y : public hittable {
 public:
-    rotate_y(shared_ptr<hittable> p, double angle);
+    __device__ rotate_y(hittable* p, double angle);
 
-    virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
+    __device__ virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
 
-    virtual bool bounding_box(aabb& output_box) const override {
+    __device__ virtual bool bounding_box(aabb& output_box) const override {
         output_box = bbox;
         return hasbox;
     }
 
 public:
-    shared_ptr<hittable> ptr;
+    hittable* ptr;
     bool hasbox;
     aabb bbox;
 private:
@@ -149,7 +149,7 @@ private:
     double cos_theta;
 };
 
-rotate_y::rotate_y(shared_ptr<hittable> p, double angle) : ptr(p) {
+__device__ rotate_y::rotate_y(hittable* p, double angle) : ptr(p) {
     auto radians = glm::radians(angle);
     sin_theta = sin(radians);
     cos_theta = cos(radians);
@@ -182,7 +182,7 @@ rotate_y::rotate_y(shared_ptr<hittable> p, double angle) : ptr(p) {
 }
 
 
-bool rotate_y::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
+__device__ bool rotate_y::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
     auto origin = r.origin();
     auto direction = r.direction();
 

@@ -5,19 +5,20 @@
 
 class fog :public hittable {
 public:
-	fog(shared_ptr<hittable> b, double density, color a):neg_inv_density(-1 / density), boundary(b), phase_function(std::make_shared<anisotropic>(a)) {
-	
-	}
+	__device__ fog(hittable* b, double density, color a, double anisotropy = 0):
+		neg_inv_density(-1 / density), 
+		boundary(b), 
+		phase_function(new anisotropic(a, anisotropy)) {}
 
-	virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
-	virtual bool bounding_box(aabb& output_box) const override {return boundary->bounding_box(output_box);}
+	__device__ virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
+	__device__ virtual bool bounding_box(aabb& output_box) const override {return boundary->bounding_box(output_box);}
 public:
-	shared_ptr<hittable> boundary;
-	shared_ptr<material> phase_function;
+	hittable* boundary;
+	material* phase_function;
 	double neg_inv_density;
 };
 
-bool fog::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
+__device__ bool fog::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
 	hit_record rec_enter, rec_exit;
 
 
@@ -40,7 +41,7 @@ bool fog::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
 
 	const auto ray_length = r.direction().length();
 	const auto distance_inside_boundary = (rec_exit.t - rec_enter.t) * ray_length;
-	const auto hit_distance = neg_inv_density * log(random_double());
+	const auto hit_distance = neg_inv_density * log(-1);
 
 	if (hit_distance > distance_inside_boundary)
 		return false;
@@ -51,7 +52,7 @@ bool fog::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
 
 	rec.normal = vec3(1, 0, 0);  // arbitrary
 	rec.front_face = true;     // also arbitrary
-	rec.mat_ptr = phase_function.get();
+	rec.mat_ptr = phase_function;
 
 	return true;
 }

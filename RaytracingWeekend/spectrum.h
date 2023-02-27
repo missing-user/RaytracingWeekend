@@ -10,14 +10,14 @@ According GitHub code:
 https://github.com/mmp/pbrt-v3/blob/aaa552a4b9cbf9dccb71450f47b268e0ed6370e2/src/core/spectrum.cpp
 */
 
-const size_t nCIESamples = 471;
-const double lambda_start = 360;
-const double lambda_end = lambda_start + nCIESamples;
-const double white_wavelength = (lambda_end + lambda_start) / 2.0;
+__device__ constexpr size_t nCIESamples = 471;
+__device__ constexpr double lambda_start = 360;
+__device__ constexpr double lambda_end = lambda_start + nCIESamples;
+__device__ constexpr double white_wavelength = (lambda_end + lambda_start) / 2.0;
 
 #pragma region CIE_LUTs
 
-const double CIE_X[nCIESamples] = {
+__device__ const double CIE_X[nCIESamples] = {
     // CIE X unction values
     0.0001299000,   0.0001458470,   0.0001638021,   0.0001840037,
     0.0002066902,   0.0002321000,   0.0002607280,   0.0002930750,
@@ -138,7 +138,7 @@ const double CIE_X[nCIESamples] = {
     0.000001905497, 0.000001776509, 0.000001656215, 0.000001544022,
     0.000001439440, 0.000001341977, 0.000001251141 };
 
-const double CIE_Y[nCIESamples] = {
+__device__ const double CIE_Y[nCIESamples] = {
     // CIE Y unction values
     0.000003917000,  0.000004393581,  0.000004929604,  0.000005532136,
     0.000006208245,  0.000006965000,  0.000007813219,  0.000008767336,
@@ -259,7 +259,7 @@ const double CIE_Y[nCIESamples] = {
     0.0000006881098, 0.0000006415300, 0.0000005980895, 0.0000005575746,
     0.0000005198080, 0.0000004846123, 0.0000004518100 };
 
-const double CIE_Z[nCIESamples] = {
+__device__ const double CIE_Z[nCIESamples] = {
     // CIE Z unction values
     0.0006061000,
     0.0006808792,
@@ -733,7 +733,7 @@ const double CIE_Z[nCIESamples] = {
     0.0,
     0.0 };
 
-const double CIE_lambda[nCIESamples] = {
+__device__  const double CIE_lambda[nCIESamples] = {
     360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372, 373, 374,
     375, 376, 377, 378, 379, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389,
     390, 391, 392, 393, 394, 395, 396, 397, 398, 399, 400, 401, 402, 403, 404,
@@ -769,7 +769,7 @@ const double CIE_lambda[nCIESamples] = {
 
 #pragma endregion
 
-color XYZToRGB(const color& xyz) {
+__host__ __device__ color XYZToRGB(const color& xyz) {
     color rgb{
         3.240479 * xyz[0] - 1.537150 * xyz[1] - 0.498535 * xyz[2],
         -0.969256 * xyz[0] + 1.875991 * xyz[1] + 0.041556 * xyz[2],
@@ -779,12 +779,12 @@ color XYZToRGB(const color& xyz) {
 }
 
 
-color lambda_to_xyz(double wavelength) {
-    size_t index = static_cast<unsigned int>(wavelength) - lambda_start;
-    index = std::min(nCIESamples-1, index);
-    size_t index2 = std::min(index + 1, nCIESamples - 1);
+__device__ color lambda_to_xyz(double wavelength) {
+    size_t index = static_cast<size_t>(wavelength) - lambda_start;
+    index = glm::min(nCIESamples - 1, index);
+    size_t index2 = glm::min(index + 1, nCIESamples - 1);
 
-    double fractional = wavelength - static_cast<unsigned int>(wavelength);
+    double fractional = wavelength - static_cast<size_t>(wavelength);
 
     double x = glm::mix(CIE_X[index], CIE_X[index2], fractional);
     double y = glm::mix(CIE_Y[index], CIE_Y[index2], fractional);
@@ -792,22 +792,22 @@ color lambda_to_xyz(double wavelength) {
     return vec3(x, y, z);
 }
 
-color lambda_to_rgb(double wavelength) {
+__device__ color lambda_to_rgb(double wavelength) {
     auto xyz = lambda_to_xyz(wavelength);
     return  XYZToRGB(xyz);
 }
 
-double wien_displacement_law(double temperature) {
-    return 2.897771955e6/temperature;//2.897771955e-3 K m -> 2.897771955e6 K nm
+__device__ double wien_displacement_law(double temperature) {
+    return 2.897771955e6 / temperature;//2.897771955e-3 K m -> 2.897771955e6 K nm
 }
 
 // TODO: This should be constexpr
-double plancks_law(const double wavelength, const double temperature) {
+__device__ double plancks_law(const double wavelength, const double temperature) {
     //return the spectral intensity at a given wavelength
     constexpr double h = 6.626e-34 * 1e9;//correction for nm
     constexpr double kb = 1.381e-23;
     constexpr double c = 299792458;
-    
+
     constexpr double numerator = 2 * h * c * c; //1.191030362862030736528 × 10^-7
     constexpr double expo = h * c / kb;
 
@@ -817,24 +817,29 @@ double plancks_law(const double wavelength, const double temperature) {
     return numerator / (pow4 * wavelength * (std::exp(expo / wavelength / temperature) - 1));
 }
 
-inline std::pair<double ,double> random_wavelength(std::size_t current, std::size_t seq_length) {
+struct plambda {
+    double probability;
+    double lambda;
+};
+
+__device__ inline plambda random_wavelength(curandState* rng, std::size_t current, std::size_t seq_length) {
     // Generate wavelengths distributed according to planck using the rejection method
     // TODO: this should be constexpr
     const double temperature = 6800.0;
     auto max_intensity = plancks_law(wien_displacement_law(temperature), temperature);
 
-    auto lambda = random_double(lambda_start, lambda_end); // replace by sobol sequence
-    auto intensity = random_double(0, max_intensity);
+    auto lambda = random_double(rng, lambda_start, lambda_end); // replace by sobol sequence
+    auto intensity = random_double(rng, 0, max_intensity);
 
     // Generate new samples until one falls within the pdf
     while (intensity > plancks_law(lambda, temperature)) {
-        lambda = random_double(lambda_start, lambda_end);
-        intensity = random_double(0, max_intensity);
+        lambda = random_double(rng, lambda_start, lambda_end);
+        intensity = random_double(rng, 0, max_intensity);
     }
-    return std::make_pair(lambda, 1);
+    return { lambda, 1 };
 
     // Alternatively: go through all wavelengths in regular intervals
     // Then the samples must be weighted by plancks_law(lambda, temperature)/plancks_law(wien_displacement_law(temperature), temperature) at the end
     lambda = glm::mix(lambda_start, lambda_end, static_cast<double>(current) / static_cast<double>(seq_length));
-    return std::make_pair(lambda, plancks_law(lambda, temperature) / max_intensity);
+    return { lambda, plancks_law(lambda, temperature) / max_intensity };
 }

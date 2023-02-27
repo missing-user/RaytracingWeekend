@@ -13,13 +13,7 @@
 #include "sampler.h"
 #include "spectrum.h"
 
-struct tile {
-    const int x, y, x_end, y_end;
-    tile(int x0, int y0, int width, int height) : x(x0), y(y0), x_end(x0 + width), y_end(y0 + height) {};
-    tile() : x(0), y(0), x_end(0), y_end(0) {};
-};
-
-color ray_color(const ray& r, const hittable& h, int depth, glm::fvec3& normal) {
+__device__ color ray_color(curandState* rng, const ray& r, hittable** h, int depth, glm::fvec3& normal) {
     color result{ 0, 0, 0 };
     vec3 attenuation{ 1, 1, 1 };
     normal = { 0,-1,0 }; // set normal to a sensible default for rays that didn't hit anything
@@ -29,18 +23,18 @@ color ray_color(const ray& r, const hittable& h, int depth, glm::fvec3& normal) 
     for (int i = 0; i < depth; i++) {
         hit_record rec;
 
-        if (h.hit(current_ray, global_t_min, infinity, rec)) {
+        if ((*h)->hit(current_ray, global_t_min, infinity, rec)) {
             // We hit an object, update color based on emission and attenuation
             color emitted = rec.mat_ptr->emitted(current_ray, rec);
             ray scattered;
 
             // Store the normal of the first diffuse/opaque ray hit
-            if (!hitDiffuse && (dynamic_cast<dielectric*>(rec.mat_ptr) == nullptr) && (dynamic_cast<thinfilm*>(rec.mat_ptr) == nullptr)) {
+            if (!hitDiffuse) {
                 normal = rec.normal;
                 hitDiffuse = true;
             }
 
-            if (rec.mat_ptr->scatter(current_ray, rec, attenuation, scattered)) {
+            if (rec.mat_ptr->scatter(rng, current_ray, rec, attenuation, scattered)) {
                 result += emitted * attenuation;
                 current_ray = scattered;
             } else {
@@ -56,144 +50,93 @@ color ray_color(const ray& r, const hittable& h, int depth, glm::fvec3& normal) 
     }
 
     // Exceeded ray depth
-    return result = { 0,0,0 };
+    return { 0,0,0 };
 }
 
-void render_tile(vector<color>& output, vector<glm::fvec3>& output_normal, const hittable& world, const std::size_t sample_count, const int max_depth, const camera& cam, const tile tile) {
-    //for rendering a single tile on a thread
-    for (int i = tile.x_end - 1; i >= tile.x; --i)
-    {
-        for (int j = tile.y_end - 1; j >= tile.y; --j)
-        {
-            color pixel_color{0,0,0};
-            double total_weight = 0.;
-                            
-            for (std::size_t s = 0; s < sample_count; ++s)
-            {
-                vec3 sample = sample_pixel(i, j, cam.image_width, cam.image_height, s);
-                total_weight += sample.z;
-
-                ray r = cam.get_ray(sample.x, sample.y);
-#ifdef DISPERSION
-                auto lambda_weight_pair = random_wavelength(s, sample_count);
-                r = { r, lambda_weight_pair.first };
-#endif // DISPERSION
-                color sample_color = ray_color(r, world, max_depth, output_normal[j * cam.image_width + i]);
-                //sample_color = output_normal[j * cam.image_width + i];
-                sample_color *= sample.z; // Weight for the pixel sample position
-
-#ifdef DISPERSION
-                sample_color *= lambda_to_rgb(r.lambda());
-                sample_color *= lambda_weight_pair.second; // Weight for the wavelength sample
-#endif // DISPERSION
-
-                pixel_color += sample_color;
-            }
-            output[j * cam.image_width + i] = (pixel_color / total_weight);
-        }
-    }
+__global__ void random_init(int max_x, int max_y, curandState* rand_state) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    int j = threadIdx.y + blockIdx.y * blockDim.y;
+    if ((i >= max_x) || (j >= max_y)) return;
+    int pixel_index = j * max_x + i;
+    //Each thread gets same seed, a different sequence number, no offset
+    curand_init(1984, pixel_index, 0, &rand_state[pixel_index]);
 }
 
-void consume_tiles(vector<color>& output, vector<glm::fvec3> &output_normal, const hittable& world, int sample_count, int max_depth, const camera& cam, const vector<tile>& tiles, std::atomic_int& tile_id, std::atomic_int& finished_threads) {
-    while (tile_id < tiles.size()) { //the queue is empty/tile is invalid, exit the thread
-        const tile next = tiles[tile_id++];
-        render_tile(output, output_normal, world, sample_count, max_depth, cam, next);
+__global__ void render_gpu(vec3* output, glm::fvec3* output_normal, int sample_count, int max_depth, camera** cam, hittable** world, curandState* rand_state) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    int j = threadIdx.y + blockIdx.y * blockDim.y;
+    if ((i >= (*cam)->image_width) || (j >= (*cam)->image_height)) return;
+    int pixel_index = j * (*cam)->image_width + i;
+    curandState local_rand_state = rand_state[pixel_index];
+
+    vec3 pixel_color{ 0, 0, 0 };
+    double total_weight = 0.;
+    for (size_t s = 0; s < sample_count; s++) {
+
+        vec3 sample = sample_pixel(&local_rand_state, i, j, (*cam)->image_width, (*cam)->image_height, s);
+        total_weight += sample.z;
+
+        ray r = (*cam)->get_ray(&local_rand_state, sample.x, sample.y);
+#ifdef DISPERSION
+        auto lambda_weight_pair = random_wavelength(local_rand_state, s, sample_count);
+        r = { r, lambda_weight_pair.lambda };
+#endif // DISPERSION
+        color sample_color = ray_color(&local_rand_state, r, world, max_depth, output_normal[pixel_index]);
+
+#ifdef DISPERSION
+        sample_color *= lambda_to_rgb(r.lambda());
+        sample_color *= lambda_weight_pair.probability; // Weight for the wavelength sample
+#endif // DISPERSION
+
+        pixel_color += sample_color *= sample.z; // Weight for the pixel sample position
     }
-    ++finished_threads;
+    output[pixel_index] = pixel_color / total_weight;
+    rand_state[pixel_index] = local_rand_state;
 }
 
 class threaded_renderer {
-
-private:
-    void create_tiles() {
-        const int x_tiles = width / tile_size;
-        const int y_tiles = height / tile_size;
-        tiles.clear();
-        tiles.reserve((x_tiles + 1) * (y_tiles + 1));
-
-        for (int tx = 0; tx < x_tiles; ++tx)
-        {
-            for (int ty = 0; ty < y_tiles; ++ty)
-            {
-                tiles.push_back(tile(tx * tile_size, ty * tile_size, tile_size, tile_size));
-            }
-            //create the cut off remainder tiles on the bottom
-            tiles.push_back(tile(tx * tile_size, y_tiles * tile_size, tile_size, height % tile_size));
-        }
-        //create the cut off remainder tiles on the right
-        for (int ty = 0; ty < y_tiles; ++ty)
-        {
-            tiles.push_back(tile(x_tiles * tile_size, ty * tile_size, width % tile_size, tile_size));
-        }
-        //create the tiny remainder tile in the bottom right corner
-        tiles.push_back(tile(x_tiles * tile_size, y_tiles * tile_size, width % tile_size, height % tile_size));
-    }
-
 public:
-    threaded_renderer(const int width, const int height, const int tile_size = 32, int sample_count = 100, int max_depth = 50) :
-        width(width), height(height), 
-        pixels({ static_cast<size_t>(width * height) }),
-        pixels_normal({ static_cast<size_t>(width * height) }),
+    threaded_renderer(const int width, const int height, const int tile_size = 8, int sample_count = 100, int max_depth = 50) :
+        width(width), height(height), num_pixels(width* height),
         tile_size(tile_size),
-        sample_count(sample_count), max_depth(max_depth),
-        num_threads(std::thread::hardware_concurrency())
+        sample_count(sample_count), max_depth(max_depth)
     {
-        create_tiles(); // these are the jobs for the thread pool
+        checkCudaErrors(cudaMallocManaged((void**)&pixels, sizeof(color) * num_pixels));
+        checkCudaErrors(cudaMallocManaged((void**)&pixels_normal, sizeof(glm::fvec3) * num_pixels));
     }
 
     double get_percentage() const {
-        return tile_id / static_cast<double>(tiles.size());
+        return .5;
     }
 
     void stop_render() {
-        for (auto &t : threads)
-            t.join();
-        threads.clear();
-        finished_threads = 0;
-        tile_id = 0;
-
         // Show the previous frame grayed out
-        std::transform(pixels.begin(), pixels.end(), pixels.begin(), [](auto& c) {return c * 0.33; });
-        //std::fill(pixels.begin(), pixels.end(), color(0, 0, 0));
+        // std::transform(pixels.begin(), pixels.end(), pixels.begin(), [](auto& c) {return c * 0.33; });
+        // std::fill(pixels.begin(), pixels.end(), color(0, 0, 0));
     }
 
-    void render(hittable& world, camera& cam) {
+    void render(hittable** world, camera** cam) {
         stop_render();
-        std::cerr << "Starting render with " << sample_count << " samples and " << max_depth << " bounces at " << width << "x" << height << std::endl;
-        
-        // create the threads for our pool, each one will independently take tiles from the queue and render them one by one until the queue is empty
-        threads.resize(num_threads);
 
-        for (int i = 0; i < std::min(num_threads, (int)tiles.size()); ++i)
-        {
-            threads[i] = std::thread(
-                    consume_tiles,
-                    ref(pixels), 
-                    ref(pixels_normal),
-                    ref(world), 
-                    sample_count, 
-                    max_depth, 
-                    ref(cam),
-                    ref(tiles),
-                    ref(tile_id),
-                    ref(finished_threads));
-            //threads[i].detach();
-        }
-        std::cerr << "Created " << threads.size() << " rendering threads\n";
+        dim3 blocks(width / tile_size + 1, height / tile_size + 1);
+        dim3 threads(tile_size, tile_size);
+
+        curandState* d_rand_state;
+        checkCudaErrors(cudaMalloc((void**)&d_rand_state, num_pixels * sizeof(curandState)));
+        random_init << <blocks, threads >> > (width, height, d_rand_state);
+        checkCudaErrors(cudaDeviceSynchronize());
+        std::cerr << "Starting render with " << sample_count << " samples and " << max_depth << " bounces at " << width << "x" << height << std::endl;
+        render_gpu << <blocks, threads >> > (pixels, pixels_normal, sample_count, max_depth, cam, world, d_rand_state);
+        checkCudaErrors(cudaGetLastError());
+        checkCudaErrors(cudaDeviceSynchronize());
     }
 
     bool finished() const {
-        return finished_threads >= num_threads;
+        return false;
     }
 public:
-    const int width, height;
-    const int num_threads;
+    const int width, height, num_pixels;
     const int tile_size, sample_count, max_depth;
-    vector<color> pixels;
-    vector<glm::fvec3> pixels_normal;
-private:
-    vector<std::thread> threads;
-    vector<tile> tiles;
-    std::atomic_int tile_id = 0;
-    std::atomic_int finished_threads = 0;
+    color* pixels;
+    glm::fvec3* pixels_normal;
 };

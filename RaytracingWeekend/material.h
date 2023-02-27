@@ -6,16 +6,16 @@ struct hit_record;
 
 class material {
 public:
-	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const = 0;
-	virtual color emitted(const ray& r_in, const hit_record& rec) const {return color(0, 0, 0);}
+	__device__ virtual bool scatter(curandState* rng, const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const = 0;
+	__device__ virtual color emitted(const ray& r_in, const hit_record& rec) const {return color(0, 0, 0);}
 };
 
 class lambertian : public material {
 public:
-	lambertian(const color& a): albedo(a){}
+	__device__ lambertian(const color& a) : albedo(a) {}
 
-	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override{
-		auto scatter_direction = rec.normal + random_unit_vector();
+	__device__ virtual bool scatter(curandState* rng, const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override{
+		auto scatter_direction = rec.normal + random_unit_vector(rng);
 
 		if (glm::all(glm::epsilonEqual(scatter_direction, vec3(0,0,0), global_t_min))) scatter_direction = rec.normal;
 
@@ -31,10 +31,10 @@ private:
 
 class directional_light : public material {
 public:
-	directional_light(color c, double angle) : emit(c), max_scalar_product(-std::cos(glm::radians(angle))), albedo(color(1,1,1)) {}
+	__device__ directional_light(color c, double angle) : emit(c), max_scalar_product(-std::cos(glm::radians(angle))), albedo(color(1, 1, 1)) {}
 
-	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
-		auto scatter_direction = rec.normal + random_unit_vector();
+	__device__ virtual bool scatter(curandState* rng, const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
+		auto scatter_direction = rec.normal + random_unit_vector(rng);
 		if (glm::all(glm::epsilonEqual(scatter_direction, vec3(0, 0, 0), global_t_min))) scatter_direction = rec.normal;
 
 		scattered = ray(rec.p, scatter_direction, r_in.lambda());
@@ -42,7 +42,7 @@ public:
 		return true;
 	}
 
-	virtual color emitted(const ray& r_in, const hit_record& rec) const override {
+	__device__ virtual color emitted(const ray& r_in, const hit_record& rec) const override {
 		const vec3 unit_direction = glm::normalize(r_in.direction());
 		if (dot(unit_direction, rec.normal) < max_scalar_product) {
 			return emit;
@@ -59,13 +59,13 @@ private:
 
 class diffuse_light : public material {
 public:
-	diffuse_light(color c) : emit(c) {}
+	__device__ diffuse_light(color c) : emit(c) {}
 
-	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
+	__device__ virtual bool scatter(curandState* rng,const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
 		return false;
 	}
 
-	virtual color emitted(const ray& r_in, const hit_record& rec) const override {
+	__device__ virtual color emitted(const ray& r_in, const hit_record& rec) const override {
 		return emit;
 	}
 
@@ -75,10 +75,10 @@ public:
 
 class metal : public material {
 public:
-	metal(const color & a, double f): albedo(a), fuzz(f< 1? f:1){}
-	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
+	__device__ metal(const color& a, double f) : albedo(a), fuzz(f < 1 ? f : 1) {}
+	__device__ virtual bool scatter(curandState* rng,const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
 		vec3 reflected = reflect(glm::normalize(r_in.direction()), rec.normal);
-		scattered = ray(rec.p, reflected + fuzz * random_in_unit_sphere(), r_in.lambda());
+		scattered = ray(rec.p, reflected + fuzz * random_in_unit_sphere(rng), r_in.lambda());
 		attenuation *= albedo;
 		return dot(scattered.direction(), rec.normal) > 0;
 	}
@@ -89,11 +89,11 @@ public:
 class anisotropic : public material {
 //useful for smoke and stuff, interesting material 
 public:
-	anisotropic(color a) : albedo(a), anisotropy(0) {}
-	anisotropic(color a, double anisotropy) : albedo(a), anisotropy(anisotropy) {}
+	__device__ anisotropic(color a) : albedo(a), anisotropy(0) {}
+	__device__ anisotropic(color a, double anisotropy) : albedo(a), anisotropy(anisotropy) {}
 
-	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
-		auto direction = random_in_unit_sphere() + normalize(r_in.direction()) * anisotropy;
+	__device__ virtual bool scatter(curandState* rng,const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
+		auto direction = random_in_unit_sphere(rng) + normalize(r_in.direction()) * anisotropy;
 		if (glm::all(glm::epsilonEqual(direction, vec3(0, 0, 0), global_t_min))) direction = rec.normal;
 		scattered = ray(rec.p, direction, r_in.lambda());
 		attenuation *= albedo;
@@ -108,11 +108,11 @@ public:
 
 class specular : public material {
 public:
-	specular(const color& a, double f) : albedo(a), fuzz(f) {}
-	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
+	__device__ specular(const color& a, double f) : albedo(a), fuzz(f) {}
+	__device__ virtual bool scatter(curandState* rng,const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
 		vec3 scatter_direction;
-		if (random_double() < fuzz) {
-			scatter_direction = rec.normal + random_unit_vector();
+		if (random_double(rng) < fuzz) {
+			scatter_direction = rec.normal + random_unit_vector(rng);
 			if (glm::all(glm::epsilonEqual(scatter_direction, vec3(0,0,0), global_t_min))) scatter_direction = rec.normal;
 		}
 		else
@@ -127,9 +127,9 @@ public:
 
 class dielectric : public material {
 public:
-	dielectric(double refractive_index) : albedo(color(1,1,1)), ri(refractive_index), blur(0.), dispersion(0.044 * 1e3) {}
-	dielectric(const color& a, double refractive_index, double blur = 0., double disp = 0.044 * 1e3) : albedo(a), ri(refractive_index), blur(blur), dispersion(disp) {}
-	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
+	__device__ dielectric(double refractive_index) : albedo(color(1, 1, 1)), ri(refractive_index), blur(0.), dispersion(0.044 * 1e3) {}
+	__device__ dielectric(const color& a, double refractive_index, double blur = 0., double disp = 0.044 * 1e3) : albedo(a), ri(refractive_index), blur(blur), dispersion(disp) {}
+	__device__ virtual bool scatter(curandState* rng, const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
 
 		#ifdef DISPERSION
 		const double r_index = ri_at_lambda(ri, dispersion, r_in.lambda());
@@ -145,12 +145,12 @@ public:
 
 		const bool cannot_refract = refraction_ratio * sin_theta > 1;
 		vec3 direction;
-		if (cannot_refract || reflectance(cos_theta, refraction_ratio) > random_double()) {
+		if (cannot_refract || reflectance(cos_theta, refraction_ratio) > random_double(rng)) {
 			direction = reflect(in_vec, rec.normal);
 		}
 		else {
 			direction = refract(in_vec, rec.normal, refraction_ratio);
-			direction += random() * blur;
+			direction += random(rng) * blur;
 		}
 
 #ifdef LAMBERT_BEER
@@ -170,39 +170,30 @@ public:
 	double blur;
 	double dispersion; // dispersion coefficient in nanometers
 private:
-	inline double fastpow5(double input) const {
+	__device__ inline double fastpow5(double input) const {
 		const double a = input * input;
 		return a * a * input;
 	}
 
-	double reflectance(double cosine, double ref_idx) const {
+	__device__ double reflectance(double cosine, double ref_idx) const {
 		//Schlicks approximation
 		auto r0 = (1 - ref_idx) / (1 + ref_idx);
 		r0 = r0 * r0;
 
 		return r0 + (1 - r0) * fastpow5(1 - cosine);
 	}
-	
-	double ri_at_lambda(double ri, double disp, double wavelength) const {
+
+	__device__ double ri_at_lambda(double ri, double disp, double wavelength) const {
 		return ri + (disp / wavelength);
 	}
 };
 
 class thinfilm : public material {
 public:
-	thinfilm(const color& a, double t, double n, const shared_ptr<material> underlying = nullptr) : albedo(a), thickness(t), n0(1), n1(n), n2(1), underlying(underlying) {
-		auto innerDielectric = dynamic_cast<dielectric*>(underlying.get());
-		if (innerDielectric != nullptr)
-			n2 = innerDielectric->ri;
-		else {
-			auto innerThinfilm = dynamic_cast<thinfilm*>(underlying.get());
-			if (innerThinfilm != nullptr) {
-				n2 = innerThinfilm->n1;
-				innerThinfilm->n0 = n1;
-			}
-		}
+	__device__ thinfilm(const color& a, double t, double n, const material* underlying = nullptr) : albedo(a), thickness(t), n0(1), n1(n), n2(1), underlying(underlying) {
+
 	}
-	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {		
+	__device__ virtual bool scatter(curandState* rng,const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
 		const double cos0 = abs(dot(r_in.direction(), rec.normal));
 
 		// compute the phase change term (constant)
@@ -246,7 +237,7 @@ public:
 			t = beamRatio * (ts + tp) / 2;
 		}
 
-		if (random_double() < t) 
+		if (random_double(rng) < t) 
 		{
 			auto scatterRes = true;
 			if(underlying == nullptr)
@@ -257,7 +248,7 @@ public:
 			}
 			else {
 				// transmission using the underlying material
-				auto scatterRes = underlying->scatter(r_in, rec, attenuation, scattered); 
+				auto scatterRes = underlying->scatter(rng, r_in, rec, attenuation, scattered); 
 				attenuation *= albedo;
 			}
 			return scatterRes;
@@ -274,23 +265,23 @@ private:
 	color albedo;
 	double thickness;
 	double n0, n1, n2;
-	const shared_ptr<material> underlying;
-	double rs(double n1, double n2, double cosI, double cosT) const {
+	const material* underlying;
+	__device__ double rs(double n1, double n2, double cosI, double cosT) const {
 		return (n1 * cosI - n2 * cosT) / (n1 * cosI + n2 * cosT);
 	}
 
 	/* Amplitude reflection coefficient (p-polarized) */
-	double rp(double n1, double n2, double cosI, double cosT) const {
+	__device__ double rp(double n1, double n2, double cosI, double cosT) const {
 		return (n2 * cosI - n1 * cosT) / (n1 * cosT + n2 * cosI);
 	}
 
 	/* Amplitude transmission coefficient (s-polarized) */
-	double ts(double n1, double n2, double cosI, double cosT) const {
+	__device__ double ts(double n1, double n2, double cosI, double cosT) const {
 		return 2 * n1 * cosI / (n1 * cosI + n2 * cosT);
 	}
 
 	/* Amplitude transmission coefficient (p-polarized) */
-	double tp(double n1, double n2, double cosI, double cosT) const {
+	__device__ double tp(double n1, double n2, double cosI, double cosT) const {
 		return 2 * n1 * cosI / (n1 * cosT + n2 * cosI);
 	}
 };
@@ -299,11 +290,11 @@ class normal :public material {
 private:
 	double brightness, saturation;
 public:
-	normal(double saturation=1):saturation(saturation), brightness(0.5){}
-	bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
+	__device__ normal(double saturation = 1) :saturation(saturation), brightness(0.5) {}
+	__device__ bool scatter(curandState* rng, const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
 		return false;
 	}
-	color emitted(const ray& r_in, const hit_record& rec) const override {
+	__device__ color emitted(const ray& r_in, const hit_record& rec) const override {
 		const vec3 a = (saturation * rec.front_face?rec.normal:-rec.normal) + vec3(brightness);
 		return color(a);
 	}

@@ -7,33 +7,30 @@
 
 class hittable_list : public hittable {
 public:
-	hittable_list() = default;
-	hittable_list(shared_ptr<hittable> object) : objects{} { add(object); }
-	hittable_list(std::vector<shared_ptr<hittable>>::iterator begin, size_t n) : objects({}) { std::copy_n(begin, n, std::back_inserter(objects)); }
-
-	void clear() {
-		objects.clear();
+	__device__ hittable_list() {}
+	__device__ hittable_list(hittable** l, int n) { objects = l; n = n; }
+	__device__ void clear() {
+		delete [] objects;
 	}
-	void add(shared_ptr<hittable> object) { objects.push_back(object); }
-	
-	virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
-	virtual bool bounding_box(aabb& output_box) const override;
+	__device__ virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
+	__device__ virtual bool bounding_box(aabb& output_box) const override;
 
 public:
-	std::vector<shared_ptr<hittable>> objects;
+	hittable** objects;
+	size_t n;
 };
 
 
-bool hittable_list::bounding_box(aabb& output_box) const {
-	if (objects.empty())
+__device__  bool hittable_list::bounding_box(aabb& output_box) const {
+	if (objects == nullptr)
 		return false;
 	if (!objects[0]->bounding_box(output_box))
 		return false;
 
-	for (const auto& object : objects)
+	for (int i = 0; i<n; i++)
 	{
 		aabb tmp_box;
-		if (object->bounding_box(tmp_box)) {
+		if (objects[i]->bounding_box(tmp_box)) {
 			output_box = surrounding_box(output_box, tmp_box);
 		}
 		else {
@@ -44,14 +41,14 @@ bool hittable_list::bounding_box(aabb& output_box) const {
 	return true;
 }
 
-bool hittable_list::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
+__device__ bool hittable_list::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
 	hit_record tmp_rec;
 	bool hit_anything=false;
 	double closest_so_far = t_max;
 
-	for (const auto& object : objects)
+	for (int i = 0; i < n; i++)
 	{
-		if (object -> hit(r, t_min, closest_so_far, tmp_rec)) {
+		if (objects[i]->hit(r, t_min, closest_so_far, tmp_rec)) {
 			hit_anything =true;
 			closest_so_far = tmp_rec.t;
 			rec = tmp_rec;

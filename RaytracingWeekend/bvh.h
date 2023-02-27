@@ -5,33 +5,29 @@
 #include "hittable_list.h"
 #include <algorithm>
 
-//TODO: This implementation is very inefficient. The BVH should be stored in a vector and not as a recursive tree on the stack
-
 class bvh_node : public hittable {
 public:
-    bvh_node() {};
-    bvh_node(std::vector<shared_ptr<hittable>>::iterator, std::vector<shared_ptr<hittable>>::iterator);
+    __device__ bvh_node() {};
+    __device__ bvh_node(hittable**, size_t);
+    //__device__ bvh_node(hittable_list& list) : bvh_node(list.objects, list.n) {}
 
-    bvh_node(hittable_list& list)
-        : bvh_node(list.objects.begin(), list.objects.end())
-    {}
+    __device__ virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
 
-    virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
-
-    virtual bool bounding_box(aabb& output_box) const override;
+    __device__ virtual bool bounding_box(aabb& output_box) const override;
 
 public:
-    shared_ptr<hittable> left;
-    shared_ptr<hittable> right;
+    hittable* left;
+    hittable* right;
     aabb box;
+    curandState* local_rand_state;
 };
 
-bool bvh_node::bounding_box(aabb& output_box) const {
+__device__ bool bvh_node::bounding_box(aabb& output_box) const {
     output_box = box;
     return true;
 }
 
-bool bvh_node::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
+__device__ bool bvh_node::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
     if (!box.hit(r, t_min, t_max))
         return false;
 
@@ -41,51 +37,75 @@ bool bvh_node::hit(const ray& r, double t_min, double t_max, hit_record& rec) co
     return hit_left || hit_right;
 }
 
-inline bool box_compare(const shared_ptr<hittable> a, const shared_ptr<hittable> b, int axis) {
+__device__ int box_compare(const hittable* a, const hittable* b, int axis) {
     aabb box_a;
     aabb box_b;
 
     if (!a->bounding_box(box_a) || !b->bounding_box(box_b))
-        throw("No bounding box in bvh_node constructor.\n");
+    {
+        //   std::cerr << ("No bounding box in bvh_node constructor.\n");
+    }
 
     // Sort by centroid
-    return box_a.min()[axis]+box_a.max()[axis] < box_b.min()[axis]+box_b.max()[axis]; 
+    return box_a.min()[axis] + box_a.max()[axis] - box_b.min()[axis] + box_b.max()[axis] ? -1 : 1;
+}
+__device__ int box_compare(const void* ah, const void* bh, int axis) {
+    hittable* a = *(hittable**)ah;
+    hittable* b = *(hittable**)bh;
+    return box_compare(a, b, axis);
 }
 
 
-inline double pair_axis_dist(std::pair<std::vector<shared_ptr<hittable>>::iterator, std::vector<shared_ptr<hittable>>::iterator> p, int axis) {
+__device__ inline double pair_axis_dist(cuda::std::pair<hittable*, hittable*> p, int axis) {
     aabb box_a;
     aabb box_b;
-    auto a = *p.first;
-    auto b = *p.second;
 
-    if (!a->bounding_box(box_a) || !b->bounding_box(box_b))
-        throw("No bounding box in bvh_node constructor.\n");
+    if (!p.first->bounding_box(box_a) || !p.second->bounding_box(box_b))
+    {
+    //    std::cerr << ("No bounding box in bvh_node constructor.\n");
+    }
 
     return box_b.max()[axis] - box_a.min()[axis];
 }
 
 
-bool box_x_compare(const shared_ptr<hittable>& a, const shared_ptr<hittable>& b) {
+__device__ int box_x_compare(const void* a, const void* b) {
     return box_compare(a, b, 0);
 }
 
-bool box_y_compare(const shared_ptr<hittable>& a, const shared_ptr<hittable>& b) {
+__device__ int box_y_compare(const void* a, const void* b) {
     return box_compare(a, b, 1);
 }
 
-bool box_z_compare(const shared_ptr<hittable>& a, const shared_ptr<hittable>& b) {
+__device__ int box_z_compare(const void* a, const void* b) {
     return box_compare(a, b, 2);
 }
 
-bvh_node::bvh_node(std::vector<shared_ptr<hittable>>::iterator start, std::vector<shared_ptr<hittable>>::iterator end) {
+__device__ bvh_node::bvh_node(hittable** start, size_t n) {
     // select the largest axis to split the bvh
     int axis;
-    auto minmax_x = std::minmax_element(start, end, box_x_compare);
-    auto minmax_y = std::minmax_element(start, end, box_y_compare);
-    auto minmax_z = std::minmax_element(start, end, box_z_compare);
 
-    if (pair_axis_dist(minmax_x, 0) > std::fmax(pair_axis_dist(minmax_y, 1), pair_axis_dist(minmax_z, 2))) {
+    cuda::std::pair<hittable*, hittable*> minmax_x{ start[0],start[0] };
+    cuda::std::pair<hittable*, hittable*> minmax_y{ start[0],start[0] };
+    cuda::std::pair<hittable*, hittable*> minmax_z{ start[0],start[0] };
+    for (size_t i = 0; i < n; i++) {
+        auto elm = start[i];
+        if (box_x_compare(elm, minmax_x.first) < 0)
+            minmax_x.first = elm;
+        if (box_y_compare(elm, minmax_y.first) < 0)
+            minmax_y.first = elm;
+        if (box_z_compare(elm, minmax_z.first) < 0)
+            minmax_z.first = elm;
+        
+        if (box_x_compare(elm, minmax_x.second) > 0)
+            minmax_x.second = elm;
+        if (box_y_compare(elm, minmax_y.second) > 0)
+            minmax_y.second = elm;
+        if (box_z_compare(elm, minmax_z.second) > 0)
+            minmax_z.second = elm;
+    }
+
+    if (pair_axis_dist(minmax_x, 0) > cuda::std::max(pair_axis_dist(minmax_y, 1), pair_axis_dist(minmax_z, 2))) {
         axis = 0;
     }
     else if (pair_axis_dist(minmax_y, 1) > pair_axis_dist(minmax_z, 2)) {
@@ -96,16 +116,15 @@ bvh_node::bvh_node(std::vector<shared_ptr<hittable>>::iterator start, std::vecto
     }
     else{
         // multiple axis have the same size, pick a random one
-        axis = random_int(0, 2);
+        axis = static_cast<int>(random_double(local_rand_state, 0., 2.));
     }
     auto comparator = (axis == 0) ? box_x_compare
         : (axis == 1) ? box_y_compare
         : box_z_compare;
 
     //how many objects does this node contain?
-    size_t object_span = end - start;
-    auto mid = start + object_span / 2;
-    std::partial_sort(start, mid, end, comparator);
+    size_t object_span = n;
+    cuda::std::qsort(&start, n, sizeof(hittable*), comparator);
 
     /*if (object_span == 1) {
         left = right = *start;
@@ -121,17 +140,20 @@ bvh_node::bvh_node(std::vector<shared_ptr<hittable>>::iterator start, std::vecto
         }
     }
     else {
-        left = make_shared<bvh_node>(start, mid);
-        right = make_shared<bvh_node>(mid, end);
+        left = new bvh_node(start, mid);
+        right = new bvh_node(mid, end);
     }*/
 
     // Terminate subdivision at a certain point
-    if (object_span <= 8) {
-        left = make_shared<hittable_list>(start, mid - start);
-        right = make_shared<hittable_list>(mid, end - mid);
+
+    if (object_span == 1) {
+        right = left = *start;
+    }else if (object_span <= 2) {
+        left = *start;
+        right = *(start +1);
     }else{
-        left = make_shared<bvh_node>(start, mid);
-        right = make_shared<bvh_node>(mid, end);
+        left = new bvh_node(start, object_span / 2);
+        right = new bvh_node(start + object_span / 2, object_span / 2);
     }
 
     aabb box_left, box_right;
@@ -139,7 +161,7 @@ bvh_node::bvh_node(std::vector<shared_ptr<hittable>>::iterator start, std::vecto
     if (!left->bounding_box(box_left)
         || !right->bounding_box(box_right)
         )
-        std::cerr << "No bounding box in bvh_node constructor.\n";
-
+    {//std::cerr << "No bounding box in bvh_node constructor.\n";
+    }
     box = surrounding_box(box_left, box_right);
 }
