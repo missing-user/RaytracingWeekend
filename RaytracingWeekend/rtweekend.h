@@ -1,5 +1,4 @@
 #pragma once
-#define GLM_FORCE_INTRINSICS
 #include "glm/glm.hpp"
 #include "glm/gtc/epsilon.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
@@ -47,6 +46,8 @@ inline double clamp(const double x, const double min=0, const double max=1) {
         return min;
     return x;
 }
+
+double max(const vec3& v) { return std::max(glm::max(v.x, v.y), v.z); }
 
 inline double random_double() {
     return dis(RANDOM);

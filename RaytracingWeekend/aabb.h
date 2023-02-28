@@ -8,6 +8,7 @@ public:
 
 	point3 min() const { return minimum; }
 	point3 max() const { return maximum; }
+    point3 center() const { return (minimum + maximum) * 0.5; }
 
     inline bool hit(const ray& r, double t_min, double t_max) const {
         // Slightly More performant hit test 
