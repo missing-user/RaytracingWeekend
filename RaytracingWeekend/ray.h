@@ -13,6 +13,7 @@ public:
 
 	point3 origin() const { return orig; }
 	vec3 direction() const { return dir; }
+	vec3 invdir() const { return 1./dir; }
 	double lambda() const { return wavelength; }
 
 	point3 at(double t) const {

@@ -38,7 +38,7 @@ bool fog::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
 	if (rec_enter.t < 0)
 		rec_enter.t = 0;
 
-	const auto ray_length = r.direction().length();
+	const auto ray_length = glm::length(r.direction());
 	const auto distance_inside_boundary = (rec_exit.t - rec_enter.t) * ray_length;
 	const auto hit_distance = neg_inv_density * log(random_double());
 

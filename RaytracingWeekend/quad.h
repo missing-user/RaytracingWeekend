@@ -59,7 +59,7 @@ public:
 };
 
 bool xy_rect::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
-    auto t = (k - r.origin().z) / r.direction().z;
+    auto t = (k - r.origin().z) * r.invdir().z;
     if (t < t_min || t > t_max)
         return false;
     auto x = r.origin().x + t * r.direction().x;
@@ -76,7 +76,7 @@ bool xy_rect::hit(const ray& r, double t_min, double t_max, hit_record& rec) con
 }
 
 bool xz_rect::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
-    auto t = (k - r.origin().y) / r.direction().y;
+    auto t = (k - r.origin().y) * r.invdir().y;
     if (t < t_min || t > t_max)
         return false;
     auto x = r.origin().x + t * r.direction().x;
@@ -92,7 +92,7 @@ bool xz_rect::hit(const ray& r, double t_min, double t_max, hit_record& rec) con
 }
 
 bool yz_rect::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
-    auto t = (k - r.origin().x) / r.direction().x;
+    auto t = (k - r.origin().x) * r.invdir().x;
     if (t < t_min || t > t_max)
         return false;
     auto y = r.origin().y + t * r.direction().y;

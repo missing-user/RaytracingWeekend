@@ -7,7 +7,6 @@ class box : public hittable {
 public:
     box(const point3& p0, const point3& p1, shared_ptr<material> ptr) : _aabb(p0, p1), mat_ptr(ptr) {
         radius = (_aabb.max() - _aabb.min()) * 0.5;
-        invRadius = 1.0 / radius;
     }
 
     bool bounding_box(aabb& output_box) const override {
@@ -16,7 +15,7 @@ public:
     }
 
     virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override {
-        vec3 m = 1.0 / r.direction(); // can precompute if traversing a set of aligned boxes
+        vec3 m = r.invdir(); // can precompute if traversing a set of aligned boxes
         vec3 n = m * (r.origin() - _aabb.center());   // can precompute if traversing a set of aligned boxes
         vec3 k = glm::abs(m) * radius;
         vec3 t1 = -n - k;
@@ -45,7 +44,6 @@ public:
 
 private:
     aabb _aabb;
-    vec3 invRadius;
     vec3 radius;
 };
 

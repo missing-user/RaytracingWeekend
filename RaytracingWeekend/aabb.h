@@ -12,7 +12,7 @@ public:
 
     inline bool hit(const ray& r, double t_min, double t_max) const {
         // Slightly More performant hit test 
-        const auto invDir = 1./r.direction();
+        const auto invDir = r.invdir();
 		auto t0 = (min() - r.origin())*invDir;
 		auto t1 = (max() - r.origin())*invDir;
 	
