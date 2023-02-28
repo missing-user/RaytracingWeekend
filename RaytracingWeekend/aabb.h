@@ -4,7 +4,7 @@
 class aabb{
 public:
     aabb() = default;
-	aabb(const point3& a, const point3& b): minimum(a),maximum(b) {}
+	aabb(const point3& min_extent, const point3& max_extent): minimum(min_extent),maximum(max_extent) {}
 
 	point3 min() const { return minimum; }
 	point3 max() const { return maximum; }
@@ -31,7 +31,7 @@ private:
 
 
 
-static aabb surrounding_box(const aabb box0, const aabb box1) {
+static aabb surrounding_box(const aabb& box0, const aabb& box1) {
     return aabb(
         glm::min(box0.min(), box1.min()), 
         glm::max(box0.max(), box1.max()));

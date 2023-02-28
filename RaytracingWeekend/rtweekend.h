@@ -47,7 +47,6 @@ inline double clamp(const double x, const double min=0, const double max=1) {
     return x;
 }
 
-double max(const vec3& v) { return std::max(glm::max(v.x, v.y), v.z); }
 
 inline double random_double() {
     return dis(RANDOM);

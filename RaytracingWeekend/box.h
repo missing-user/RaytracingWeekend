@@ -2,13 +2,6 @@
 #include "hittable.h"
 #include "quad.h"
 
-// These are indicies that are used in my method for Box::hit()
-constexpr short Back = 0;
-constexpr short Front = 1;
-constexpr short Top = 2;
-constexpr short Bottom = 3;
-constexpr short Left = 4;
-constexpr short Right = 5;
 
 class box : public hittable {
 public:
@@ -22,36 +15,29 @@ public:
         return true;
     }
 
-    bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override {
-        vec3 nrdir = normalize(r.direction());
-        vec3 _invRayDir = 1.0 / nrdir;
-        vec3 rorigin = r.origin() - _aabb.center();
+    virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override {
+        vec3 m = 1.0 / r.direction(); // can precompute if traversing a set of aligned boxes
+        vec3 n = m * (r.origin() - _aabb.center());   // can precompute if traversing a set of aligned boxes
+        vec3 k = glm::abs(m) * radius;
+        vec3 t1 = -n - k;
+        vec3 t2 = -n + k;
 
-        bool outsideBox = max(glm::abs(rorigin) * invRadius) >= 1.0;
-        vec3 sgn = -sign(r.direction());
+        double tN = glm::max(glm::max(t1.x, t1.y), t1.z);
+        double tF = glm::min(glm::min(t2.x, t2.y), t2.z);
 
-        // Distance to plane
-        vec3 d = radius * (outsideBox ? 1. : -1.) * sgn - rorigin;
-        d *= _invRayDir;
+        if (tN > tF || tF < 0.0) return false; // no intersection
 
-# define TEST(U, V, W) (d.U >= 0.0) && glm::all(glm::lessThan(glm::abs(glm::vec2(rorigin.V, rorigin.W) + glm::vec2(nrdir.V * d.U, nrdir.W * d.U) ), glm::vec2(radius.V, radius.W)))
-        glm::bvec3 test{ TEST(x, y, z), TEST(y, z, x), TEST(z, x, y) };
-        sgn = test.x ? vec3(sgn.x, 0, 0) : (test.y ? vec3(0, sgn.y, 0) : vec3(0, 0, test.z ? sgn.z : 0));
-# undef TEST
-
-        d *= r.direction();
-        double distance = (sgn.x != 0) ? d.x : ((sgn.y != 0) ? d.y : d.z);
-        // UV: box.invDirection * hitPoint
-        distance *= glm::length(r.direction());
+        rec.front_face = (tN > 0.0);
+        rec.normal = (tN > 0.0) ? step(vec3(tN), t1) : // ro ouside the box
+                                  step(t2, vec3(tF));  // ro inside the box
+        rec.normal *= -glm::sign(r.direction());
 
         // Setup the rest of the hit record
-        rec.t = distance;
-        rec.p = r.at(distance);
-        rec.normal = sgn;
-        rec.front_face = outsideBox;
+        rec.t = (tN > 0.0) ? tN : tF;
+        rec.p = r.at(rec.t);
         rec.mat_ptr = mat_ptr.get();
 
-        return (sgn.x != 0) || (sgn.y != 0) || (sgn.z != 0);
+        return (tN > 0.0);
     }
 
 public:
