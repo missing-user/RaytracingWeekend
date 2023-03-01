@@ -79,6 +79,33 @@ hittable_list random_scene() {
 
     return world;
 }
+hittable_list cornell() {
+    hittable_list objects;
+    auto red = make_shared<lambertian>(color(.65, .05, .05));
+    auto white = make_shared<lambertian>(color(.73, .73, .73));
+    //auto white = make_shared<normal>();
+    auto green = make_shared<lambertian>(color(.12, .45, .15));
+    auto light = make_shared<diffuse_light>(color(15, 15, 15));
+
+    objects.add(make_shared<yz_rect>(0, 555, 0, 555, 555, green));
+    objects.add(make_shared<yz_rect>(0, 555, 0, 555, 0, red));
+    objects.add(make_shared<xz_rect>(213, 343, 227, 332, 554, light));
+    objects.add(make_shared<xz_rect>(0, 555, 0, 555, 0, white));
+    objects.add(make_shared<xz_rect>(0, 555, 0, 555, 555, white));
+    objects.add(make_shared<xy_rect>(0, 555, 0, 555, 555, white));
+
+    auto prismGlass = make_shared<dielectric>(color(1, 1, 1), 1.45, 0);
+    objects.add(make_shared<rotate_y>(make_shared<box>(point3(130, 0.01, 65), point3(295, 165, 230), prismGlass), -18));
+    objects.add(make_shared<box>(point3(265, 0, 295), point3(430, 330, 460), white));
+
+
+
+    //objects.add(make_shared<box>(point3(278-20, 278, -850), point3(278, 278+30, 100), white));
+    //objects.add(make_shared<box>(point3(278 - 20, 278-5, -850), point3(278, 278, 100), white));
+
+    return objects;
+}
+
 
 
 hittable_list glass_box_and_sphere() {

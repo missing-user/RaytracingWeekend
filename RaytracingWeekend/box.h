@@ -2,6 +2,20 @@
 #include "hittable.h"
 #include "quad.h"
 
+constexpr short Back = 0;
+constexpr short Front = 1;
+constexpr short Top = 2;
+constexpr short Bottom = 3;
+constexpr short Left = 4;
+constexpr short Right = 5;
+
+double max(const vec3& vv) {
+    return glm::max(vv.x, glm::max(vv.y, vv.z));
+}
+
+int indexOfMaxComponent(const vec3& v) {
+    return (v.x > v.y) ? ((v.x > v.z) ? 0 : 2) : ((v.y > v.z) ? 1 : 2);
+}
 
 class box : public hittable {
 public:
@@ -15,6 +29,8 @@ public:
     }
 
     virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override {
+        // https://iquilezles.org/articles/boxfunctions/
+
         vec3 m = r.invdir(); // can precompute if traversing a set of aligned boxes
         vec3 n = m * (r.origin() - _aabb.center());   // can precompute if traversing a set of aligned boxes
         vec3 k = glm::abs(m) * radius;
@@ -28,7 +44,7 @@ public:
 
         rec.front_face = (tN > 0.0);
         rec.normal = (tN > 0.0) ? step(vec3(tN), t1) : // ro ouside the box
-                                  step(t2, vec3(tF));  // ro inside the box
+            step(t2, vec3(tF));  // ro inside the box
         rec.normal *= -glm::sign(r.direction());
 
         // Setup the rest of the hit record
@@ -36,7 +52,7 @@ public:
         rec.p = r.at(rec.t);
         rec.mat_ptr = mat_ptr.get();
 
-        return (tN > 0.0);
+        return rec.t >= t_min && rec.t <= t_max;
     }
 
 public:
@@ -46,8 +62,6 @@ private:
     aabb _aabb;
     vec3 radius;
 };
-
-
 
 
 class rotate_y : public hittable {
@@ -128,7 +142,6 @@ bool rotate_y::hit(const ray& r, double t_min, double t_max, hit_record& rec) co
     normal[2] = -sin_theta * rec.normal[0] + cos_theta * rec.normal[2];
 
     rec.p = p;
-    rec.set_face_normal(rotated_r, normal);
-
+    rec.normal = normal;
     return true;
 }

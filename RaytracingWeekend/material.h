@@ -140,10 +140,10 @@ public:
 		const double refraction_ratio = rec.front_face ? (1. / r_index) : r_index;
 
 		const auto in_vec = glm::normalize(r_in.direction());
-		const auto cos_theta = fmin(dot(-in_vec, rec.normal), 1);
-		const double sin_theta = sqrt(1 - cos_theta * cos_theta);
+		const auto cos_theta = fmin(dot(-in_vec, rec.normal), 1.);
+		const double sin_theta = sqrt(1. - cos_theta * cos_theta);
 
-		const bool cannot_refract = refraction_ratio * sin_theta > 1;
+		const bool cannot_refract = refraction_ratio * sin_theta > 1.;
 		vec3 direction;
 		if (cannot_refract || reflectance(cos_theta, refraction_ratio) > random_double()) {
 			direction = reflect(in_vec, rec.normal);
@@ -304,7 +304,10 @@ public:
 		return false;
 	}
 	color emitted(const ray& r_in, const hit_record& rec) const override {
-		const vec3 a = (saturation * rec.front_face?rec.normal:-rec.normal) + vec3(brightness);
-		return color(a);
+		// return (saturation * rec.front_face ? rec.normal : -rec.normal) + vec3(brightness);
+		if(rec.front_face)
+			return (saturation * rec.normal) + vec3(brightness);
+		else
+			return (.2 * saturation * rec.normal) + vec3(.2);
 	}
 };
