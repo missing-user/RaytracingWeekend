@@ -9,6 +9,10 @@ public:
 	point3 min() const { return minimum; }
 	point3 max() const { return maximum; }
     point3 center() const { return (minimum + maximum) * 0.5; }
+    vec3 extent() const { return (maximum - minimum)*0.5; }
+    double surface_area() const {
+        return 2. * (extent().x * extent().y + extent().x * extent().z + extent().y * extent().z);
+    }
 
     inline bool hit(const ray& r, double t_min, double t_max) const {
         // Slightly More performant hit test 

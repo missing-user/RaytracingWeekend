@@ -6,8 +6,8 @@ struct camera_settings {
     point3 lookfrom;
     point3 lookat;
 
-    double aperture = 0;
     double vfov = 20.;
+    double aperture = 0;
 
     vec3 vup{ 0, 1, 0 };
 };
