@@ -19,45 +19,64 @@ My version extends the basic tracer described in Book 1 by adding:
 ## Gallery
 
 ![dispersion demo](Image_Outputs/emissive_dispersive.png)
+
 Dispersion is visible at the edges of the glass spheres (rainbow colored edges)
 
 ![](Image_Outputs/concentric_spheres.png)
+
 Programatically generated scene with concentric glass spheres
 
 ![emission demo](Image_Outputs/only_emissive.png)
 
 ![multithreading artifacts](Image_Outputs/cursed_memory.png)
+
 Artifacts caused by race conditions between multiple threads which try to write into the image array.
 
 ![which rays travelled through glass](Image_Outputs/debug_efficient_dispersion.png)
+
 All light rays that travelled through glass are colored in green for debugging purposes.
 
 
 ![](Image_Outputs/spectrum_rgb.png)
+
 Rainbow produces by interpolating RGB looks unnatural and would not produce realistic dispersion.
 
 ![](Image_Outputs/spectrum_xyz.png) 
+
 Rainbow produced by simulating the intensity of different wavelengths using the planck spectrum. The wavelengths are convoluted by the sensitivity spectrum of our eyes receptors to get the color we would see. This produces a realistic spectrum image and much better dispersion. 
 
 Another advantage of this approach is that we can realistically simulate the color of blackbody radiation by setting the temperature of the object to the desired value.
+
 ![](Image_Outputs/planck_2000K.png)
+
 2000K blackbody radiation
+
 ![](Image_Outputs/planck_4500K.png)
+
 4500K blackbody radiation
+
 ![](Image_Outputs/planck_8000K.png)
+
 8000K blackbody radiation
 
 ![](Image_Outputs/temperature_gradient.png)
+
 Image produced by changing the temperature of the lightsource during the render
+
 ![](Image_Outputs/obj_susan_test_inverted.png)
+
 Testing OBJ file loading 
 
 ![](Image_Outputs/dispersion_rgb.png)
+
 Simplified RGB dispersion model, debug image
 
 ![](Image_Outputs/metal_and_diffuse.png)
+
 Reference image of 3 spheres made from different materials
+
 ![](Image_Outputs/metal_and_diffuse_cross.png)
+
 What happens if we apply a cross product instead of a dot product to the normals?
 
 ### Performance
