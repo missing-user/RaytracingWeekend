@@ -18,6 +18,9 @@ My version extends the basic tracer described in Book 1 by adding:
 
 ## Gallery
 
+![](Image_Outputs/monkey_caustics.png)
+Caustics and dispersion from a sphere light through a triangle mesh.  
+
 ![dispersion demo](Image_Outputs/emissive_dispersive.png)
 Dispersion is visible at the edges of the glass spheres (rainbow colored edges)
 
