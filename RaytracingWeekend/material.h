@@ -57,9 +57,9 @@ private:
 	double max_scalar_product;
 };
 
-class diffuse_light : public material {
+class emissive : public material {
 public:
-	diffuse_light(color c) : emit(c) {}
+	emissive(color c) : emit(c) {}
 
 	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
 		return false;

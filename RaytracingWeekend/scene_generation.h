@@ -85,7 +85,7 @@ hittable_list cornell() {
     auto white = make_shared<lambertian>(color(.73, .73, .73));
     //auto white = make_shared<normal>();
     auto green = make_shared<lambertian>(color(.12, .45, .15));
-    auto light = make_shared<diffuse_light>(color(15, 15, 15));
+    auto light = make_shared<emissive>(color(15, 15, 15));
 
     objects.add(make_shared<yz_rect>(0, 555, 0, 555, 555, green));
     objects.add(make_shared<yz_rect>(0, 555, 0, 555, 0, red));
@@ -120,7 +120,7 @@ hittable_list glass_box_and_sphere() {
     world.add(make_shared<sphere>(point3(1.5, .6, -1.6), .6, prismGlass));
 
 
-    auto difflight = make_shared<diffuse_light>(color(20, 20, 20));
+    auto difflight = make_shared<emissive>(color(20, 20, 20));
     world.add(make_shared<xy_rect>(1.2, 1.8, -1, 2, -.1, difflight));
     world.add(make_shared<sphere>(point3(-2, .2, 1.2), .1, difflight));
 
@@ -173,7 +173,7 @@ hittable_list caustics() {
     //world.add(make_shared<sphere>(point3(1.5, .6, -1.6), .6, prismGlass));
     auto iprismGlass = make_shared<dielectric>(color(1,1, 1), 1.51, 0);
 
-    auto difflight = make_shared<diffuse_light>(color(50, 50, 50));
+    auto difflight = make_shared<emissive>(color(50, 50, 50));
     world.add(make_shared<sphere>(point3(-2.2,2.2,.5),.2, difflight));
 
     auto glassObj = obj("susan2.obj", prismGlass);
@@ -286,7 +286,7 @@ hittable_list final_scene() {
         }
     }
 
-    auto light = make_shared<diffuse_light>(color(7, 7, 7));
+    auto light = make_shared<emissive>(color(7, 7, 7));
     objects.add(make_shared<xz_rect>(123, 423, 147, 412, 554, light));
 
     auto center1 = point3(400, 400, 200);
