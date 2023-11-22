@@ -7,7 +7,7 @@ Sampling Methods
 They return where the current pixel should be sampled, originating from the pixel center. The z coordinate does not have a meaning
 */
 static vec3 sample_uniform(int sample_index) {
-	return random()-vec3(.5,.5,0.);
+	return random_dir()-vec3(.5,.5,0.);
 }
 
 static vec3 sample_center(int sample_index) {

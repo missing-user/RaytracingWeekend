@@ -66,18 +66,18 @@ double random_double(const double min, const double max) {
     return random_double() * (max - min) + min;
 }
 
-vec3 random() {
+vec3 random_dir() {
     return vec3(random_double(), random_double(), random_double());
 }
 
-vec3 random(double min, double max) {
+vec3 random_dir(double min, double max) {
     return vec3(random_double(min, max), random_double(min, max), random_double(min, max));
 }
 
 vec3 random_in_unit_sphere() {
 
     while (true) {
-        auto p = random(-1, 1);
+        auto p = random_dir(-1, 1);
         if (glm::length2(p) < 1)
             return p;
     }

@@ -150,7 +150,7 @@ public:
 		}
 		else {
 			direction = refract(in_vec, rec.normal, refraction_ratio);
-			direction += random() * blur;
+			direction += random_dir() * blur;
 		}
 
 #ifdef LAMBERT_BEER

@@ -43,9 +43,9 @@ hittable_list obj(std::string filename, std::shared_ptr<material> mat) {
             std::getline(file, strBuffer);
 
             //pattern match for 1/2/3 (data including UV) or 1//2 (face data without UV information)
-            int matches = sscanf_s(strBuffer.c_str(), "%d/%*d/%d %d/%*d/%d %d/%*d/%d\n", &vertexIndex[0], &normalIndex[0], &vertexIndex[1], &normalIndex[1], &vertexIndex[2], &normalIndex[2]);
+            int matches = sscanf(strBuffer.c_str(), "%d/%*d/%d %d/%*d/%d %d/%*d/%d\n", &vertexIndex[0], &normalIndex[0], &vertexIndex[1], &normalIndex[1], &vertexIndex[2], &normalIndex[2]);
             if (matches != 6) {
-                matches = sscanf_s(strBuffer.c_str(), "%d//%d %d//%d %d//%d\n", &vertexIndex[0], &normalIndex[0], &vertexIndex[1], &normalIndex[1], &vertexIndex[2], &normalIndex[2]);
+                matches = sscanf(strBuffer.c_str(), "%d//%d %d//%d %d//%d\n", &vertexIndex[0], &normalIndex[0], &vertexIndex[1], &normalIndex[1], &vertexIndex[2], &normalIndex[2]);
                 if (matches != 6) {
                     std::cerr << "Parser couldn't read the file contents." << std::endl;
                     return my_tris;

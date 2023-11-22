@@ -44,13 +44,13 @@ hittable_list random_scene() {
 
                 if (choose_mat < 0.8) {
                     // diffuse
-                    auto albedo = random() * random();
+                    auto albedo = random_dir() * random_dir();
                     sphere_material = make_shared<lambertian>(albedo);
                     world.add(make_shared<sphere>(center, 0.2, sphere_material));
                 }
                 else if (choose_mat < 0.95) {
                     // metal
-                    auto albedo = random(0.5, 1);
+                    auto albedo = random_dir(0.5, 1);
                     auto fuzz = random_double(0, 0.5);
                     sphere_material = make_shared<metal>(albedo, fuzz);
                     world.add(make_shared<sphere>(center, 0.2, sphere_material));
@@ -203,13 +203,13 @@ hittable_list horse_scene() {
 
                 if (choose_mat < 0.8) {
                     // diffuse
-                    auto albedo = random() * random();
+                    auto albedo = random_dir() * random_dir();
                     sphere_material = make_shared<lambertian>(albedo);
                     world.add(make_shared<sphere>(center, 0.2, sphere_material));
                 }
                 else if (choose_mat < 0.95) {
                     // metal
-                    auto albedo = random(0.5, 1);
+                    auto albedo = random_dir(0.5, 1);
                     auto fuzz = random_double(0, 0.5);
                     sphere_material = make_shared<metal>(albedo, fuzz);
                     world.add(make_shared<sphere>(center, 0.2, sphere_material));
@@ -311,7 +311,7 @@ hittable_list final_scene() {
     auto white = make_shared<lambertian>(color(.73, .73, .73));
     int ns = 1000;
     for (int j = 0; j < ns; j++) {
-        boxes2.add(make_shared<sphere>(random(0, 165)+vec3(-100, 270, 395), 10, white));
+        boxes2.add(make_shared<sphere>(random_dir(0, 165)+vec3(-100, 270, 395), 10, white));
     }
 
     return objects;

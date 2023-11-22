@@ -13,8 +13,20 @@ My version extends the basic tracer described in Book 1 by adding:
 6. Directional lights (only emmit light when hit within the determined angle, e.g. to simulate lasers)
 7. 16bit floating point EXR support (for HDR and better color depth) using an adapted version of [mini exr](https://github.com/aras-p/miniexr)
 
+## Installation
+### Linux
+```sh
+sudo apt install libglm-dev libsfml-dev libpcg-cpp-dev 
+mkdir build
+cd build
+cmake ..
+make
+```
 
-
+Then run the executable 
+```sh
+./RaytracingWeekend
+```
 
 ## Gallery
 
