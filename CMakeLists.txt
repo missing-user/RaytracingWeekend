@@ -21,6 +21,8 @@ include_directories(${GLM_INCLUDE_DIRS})
 
 # Define the executable
 add_executable(${PROJECT_NAME} ${SOURCES})
+target_compile_options(${PROJECT_NAME} PRIVATE -Ofast -march=native)
+
 
 # Link against SFML
 target_link_libraries(${PROJECT_NAME} PRIVATE sfml-graphics)
