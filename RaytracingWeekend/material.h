@@ -203,7 +203,7 @@ public:
 		}
 	}
 	virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {		
-		const double cos0 = abs(dot(r_in.direction(), rec.normal));
+		const double cos0 = glm::abs(dot(r_in.direction(), rec.normal));
 
 		// compute the phase change term (constant)
 		double d10 = (n1 > n0) ? 0 : pi;
