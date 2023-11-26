@@ -13,7 +13,9 @@ typedef vec3 point3;
 #include "pcg_random.hpp"
 #include "pcg_uint128.hpp"
 
-//#define EXR_SUPPORT
+#include <numbers>
+
+#define EXR_SUPPORT
 //#define DISPERSION
 #define LAMBERT_BEER
 
@@ -35,7 +37,7 @@ using std::vector;
 // Constants
 const double global_t_min = 1e-6; //DBL_EPSILON?
 const double infinity = DBL_MAX;
-const double pi = 3.1415926535897932385;
+const double pi = std::numbers::pi_v<double>;
 const double aspect_ratio = 16.0 / 9.0;
 
 // Utility Functions
