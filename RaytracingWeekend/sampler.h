@@ -61,7 +61,15 @@ Final combined method
 const auto filter = mitchell_filter;
 const auto sampler = sample_uniform;
 
-static vec3 sample_pixel(int x, int y, int width, int height, int sample_index) {
+struct PixelSample {
+    double u;
+    double v;
+    double weight;
+};
+
+static PixelSample sample_pixel(int x, int y, int width, int height, int sample_index) {
 	const vec3 offset = sampler(sample_index);
-	return vec3((x + .5 + offset.x) / (width - 1.), (y + .5 + offset.y) / (height - 1.), filter(offset));
+	return PixelSample{(x + .5 + offset.x) / (width - 1.), 
+											(y + .5 + offset.y) / (height - 1.), 
+											filter(offset)};
 }
