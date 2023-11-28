@@ -183,9 +183,11 @@ void write_exr_file(const char *filepath, const int width, const int height, con
 	unsigned char* exr = miniexr_write(width, height, 3, rgb, &exrSize);
 
 	std::cerr << "Writing EXR to file...  "<< std::endl;
-	FILE* f;
-	fopen_s(&f, filepath, "wb");
+	FILE* f = fopen(filepath, "wb");
 	fwrite(exr, 1, exrSize, f);
 	fclose(f);
+	std::cerr << "Done!" << std::endl;
+	
+	free(rgb);
 	free(exr);
 }
