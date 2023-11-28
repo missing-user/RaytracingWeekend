@@ -175,9 +175,9 @@ private:
 		return a * a * input;
 	}
 
-	double reflectance(double cosine, double ref_idx) const {
-		//Schlicks approximation
-		auto r0 = (1 - ref_idx) / (1 + ref_idx);
+	double reflectance(double cosine, double r_index) const {
+		//Schlicks approximation using the index of refraction
+		auto r0 = (1 - r_index) / (1 + r_index);
 		r0 = r0 * r0;
 
 		return r0 + (1 - r0) * fastpow5(1 - cosine);
@@ -189,6 +189,10 @@ private:
 };
 
 class thinfilm : public material {
+// More general metal AND thinfilm material (can be used for dielectrics too)
+// https://blenderartists.org/t/pbr-metal-shader-with-accurate-fresnel-based-on-complex-refractive-index-script/672025
+
+
 public:
 	thinfilm(const color& a, double t, double n, const shared_ptr<material> underlying = nullptr) : albedo(a), thickness(t), n0(1), n1(n), n2(1), underlying(underlying) {
 		auto innerDielectric = dynamic_cast<dielectric*>(underlying.get());
@@ -235,8 +239,8 @@ public:
 			double phi = (2 * pi / r_in.lambda()) * (2 * n1 * thickness * cos1) + delta;
 
 			// finally, evaluate the transmitted intensity for the two possible polarizations
-			double ts = pow(beta_s, 2) / (pow(alpha_s, 2) - 2 * alpha_s * cos(phi) + 1);
-			double tp = pow(beta_p, 2) / (pow(alpha_p, 2) - 2 * alpha_p * cos(phi) + 1);
+			double ts = beta_s*beta_s / (alpha_s*alpha_s - 2 * alpha_s * cos(phi) + 1);
+			double tp = beta_p*beta_p / (alpha_p*alpha_p - 2 * alpha_p * cos(phi) + 1);
 
 			// we need to take into account conservation of energy for transmission
 			double beamRatio = (n2 * cos2) / (n0 * cos0);
