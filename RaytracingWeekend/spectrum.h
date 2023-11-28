@@ -792,6 +792,10 @@ color lambda_to_xyz(double wavelength) {
     return vec3(x, y, z);
 }
 
+double luminance(color c) {
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+
 color lambda_to_rgb(double wavelength) {
     auto xyz = lambda_to_xyz(wavelength);
     return  XYZToRGB(xyz);
@@ -808,7 +812,7 @@ double plancks_law(const double wavelength, const double temperature) {
     constexpr double kb = 1.381e-23;
     constexpr double c = 299792458;
     
-    constexpr double numerator = 2 * h * c * c; //1.191030362862030736528 × 10^-7
+    constexpr double numerator = 2 * h * c * c; //1.191030362862030736528 ï¿½ 10^-7
     constexpr double expo = h * c / kb;
 
     auto pow2 = wavelength * wavelength * 1e-12;
