@@ -1,6 +1,7 @@
 #pragma once
 #include "rtweekend.h"
 typedef vec3 color;
+typedef vec3 normal3;
 
 /*
 CIE Tables and XYZ to RGB conversion from the Book Physically Based Rendering, chapter 5

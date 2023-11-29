@@ -4,6 +4,7 @@
 template<class T> 
 class variance_welford{
 public:
+    variance_welford() : n(0), m_mean(), m_sum2() {}
     variance_welford(T m_initial) : n(0), m_mean(m_initial), m_sum2(m_initial) {}
 
     variance_welford& operator+=(const T& rhs){
@@ -41,6 +42,7 @@ private:
 template<class T> 
 class weighted_variance_welford{
 public:
+    weighted_variance_welford() : weight_sum(0), m_mean(), m_sum2() {}
     weighted_variance_welford(T m_initial) : weight_sum(0), m_mean(m_initial), m_sum2(m_initial) {}
 
     void add_sample(const T& x, double weight) {
@@ -64,7 +66,19 @@ public:
     T standard_deviation() const {
         return sqrt(variance());
     }
+
+    T convergence() const {
+        return 1.96*sqrt(variance()/weight_sum); //https://cs184.eecs.berkeley.edu/sp23/docs/proj3-1-part-5
+    }
+
+    double get_weight_sum() const {
+        return weight_sum;
+    }
+
+    void override_variance(T new_variance) {
+        m_sum2 = new_variance * (weight_sum - 1);
+    }
 private:
-  T m_sum2, m_mean;
+  T m_mean, m_sum2;
   double weight_sum;
 }; 
