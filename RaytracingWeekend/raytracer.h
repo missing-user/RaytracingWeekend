@@ -59,6 +59,7 @@ color ray_color(const ray &r, const hittable &h, int depth, normal3 &normal)
         else
         {
             // Background color / sky sphere
+            // return color(0, 0, 0); // black sky
             vec3 unit_direction = glm::normalize(current_ray.direction());
             auto t = 0.5 * (unit_direction.y + 1.0);
             result += attenuation * ((1.0 - t) * color(1.0, 1.0, 1.0) + t * color(0.5, 0.7, 1.0));
@@ -70,59 +71,38 @@ color ray_color(const ray &r, const hittable &h, int depth, normal3 &normal)
     return result = {0, 0, 0};
 }
 
-void render_tile(vector<color> &output, vector<normal3> &output_normal, const hittable &world, const std::size_t sample_count, const int max_depth, const camera &cam, const tile tile)
-{
-    // for rendering a single tile on a thread
-    vector<weighted_variance_welford<color>> pixel_colors;
-    pixel_colors.resize((tile.x_end - tile.x) * (tile.y_end - tile.y));
-    int min_sample_count = sample_count, max_sample_count = 100 * sample_count;
-
-    for (int i = tile.x_end - 1; i >= tile.x; --i)
-    {
-        for (int j = tile.y_end - 1; j >= tile.y; --j)
-        {
-            for (std::size_t s = 0; s < min_sample_count; ++s)
-            {
-                auto &pixel_color = pixel_colors[(j - tile.y) * (tile.x_end - tile.x) + (i - tile.x)];
-
-                PixelSample sample = sample_pixel(i, j, cam.image_width, cam.image_height, s);
-                ray r = cam.get_ray(sample.u, sample.v);
-#ifdef DISPERSION
-                auto lambda_weight_pair = random_wavelength(s, sample_count);
-                r = {r, lambda_weight_pair.first}; // Apply the wavelength to a ray
-#endif                                             // DISPERSION
-                color sample_color = ray_color(r, world, max_depth, output_normal[j * cam.image_width + i]);
-
-#ifdef DISPERSION
-                sample_color *= lambda_to_rgb(r.lambda());
-                sample.weight *= lambda_weight_pair.second; // Weight for the wavelength sample
-#endif                                                      // DISPERSION
-                pixel_color.add_sample(sample_color, sample.weight);
-                output[j * cam.image_width + i] = pixel_color.mean();
-            }
-        }
-    }
-
-    // Locally average the variance of neighboring pixels
+// Function to calculate maximum variance
+color calculate_max_variance(vector<weighted_variance_welford<color>>& pixel_colors) {
     color max_var = {0, 0, 0};
     for(auto& pixel_color : pixel_colors)
     {
         max_var = glm::max(max_var, pixel_color.variance());
     }
+    return max_var;
+}
+
+// Function to override variance
+void override_variance(vector<weighted_variance_welford<color>>& pixel_colors, color max_var) {
     for(auto& pixel_color : pixel_colors)
     {
         pixel_color.override_variance(max_var);
     }
+}
 
+void render_tile(vector<color> &output, vector<normal3> &output_normal, const hittable &world, const std::size_t sample_count, const int max_depth, const camera &cam, const tile tile)
+{
+    // for rendering a single tile on a thread
+    vector<weighted_variance_welford<color>> pixel_colors;
+    pixel_colors.resize((tile.x_end - tile.x) * (tile.y_end - tile.y));
+    int sample_batch_size = sample_count/20;
 
-    // Oversample pixels with high variance
     for (int i = tile.x_end - 1; i >= tile.x; --i)
     {
         for (int j = tile.y_end - 1; j >= tile.y; --j)
         {
             auto &pixel_color = pixel_colors[(j - tile.y) * (tile.x_end - tile.x) + (i - tile.x)];
-            std::size_t s = min_sample_count;
-            while (++s < max_sample_count && luminance(pixel_color.convergence() / pixel_color.mean()) > 0.05)
+            std::size_t s;
+            for (s = 1; s <= sample_count; ++s)
             {
                 PixelSample sample = sample_pixel(i, j, cam.image_width, cam.image_height, s);
                 ray r = cam.get_ray(sample.u, sample.v);
@@ -137,10 +117,20 @@ void render_tile(vector<color> &output, vector<normal3> &output_normal, const hi
                 sample.weight *= lambda_weight_pair.second; // Weight for the wavelength sample
 #endif                                                      // DISPERSION
                 pixel_color.add_sample(sample_color, sample.weight);
-                output[j * cam.image_width + i] = pixel_color.mean();
-                // output[j * cam.image_width + i] = pixel_color.convergence()/pixel_color.mean();
-                // output[j * cam.image_width + i] = color(pixel_color.get_weight_sum()/max_sample_count);
+
+
+                if(s%sample_batch_size == 0)
+                {
+                    // Locally average the variance of neighboring pixels
+                    // override_variance(pixel_colors, calculate_max_variance(pixel_colors));
+                    if( luminance(pixel_color.convergence() / pixel_color.mean()) < 2./std::sqrt(sample_count))
+                    {
+                        // Early exit if the pixel is converged
+                        break;
+                    }
+                }
             }
+            output[j * cam.image_width + i] = pixel_color.mean();//color(static_cast<double>(s)/sample_count)
         }
     }
 }
