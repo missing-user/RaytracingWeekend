@@ -5,13 +5,15 @@ Implemented a raytracer by following the [_Ray Tracing in One Weekend_](https://
 
 ## Improvements
 My version extends the basic tracer described in Book 1 by adding:
-1. Two dispersion models (1: rays split into 3 discrete colors, 2: continuous blackbody spectrum is dispersed, conversion of wavelength to color at the end)
+0. Per-pixel variance estimation, early exit if noise if below a certain threshold. This speeds up rendering in the tested scenes by a factor of 3 to 4 while producing similar levels of visual noise. More complex parts of the image will be rendered using up to 20x more samples than simple parts of the scene.
+1. Spectral rendering for dispersion using a continuous blackbody spectrum, conversion of wavelength to color at the end
 2. GUI
 3. More primitives (mostly from book 2 and triangle intersections using the Möller Trumbore algorithm)
 4. Sampling and filtering improvements as described in the book [Physically based rendering](https://pbr-book.org/3ed-2018/contents)
 5. Obj loading based on [this OpenGL tutorial](http://www.opengl-tutorial.org/beginners-tutorials/tutorial-7-model-loading/), slightly improved to utilize newer C++ features
-6. Directional lights (only emmit light when hit within the determined angle, e.g. to simulate lasers)
+6. Directional lights (only emit light when hit within the determined angle, e.g. to simulate lasers)
 7. 16bit floating point EXR support (for HDR and better color depth) using an adapted version of [mini exr](https://github.com/aras-p/miniexr)
+8. Multithreading 
 
 ## Installation
 ### Linux
