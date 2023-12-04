@@ -227,8 +227,7 @@ hittable_list horse_scene() {
     auto material2 = make_shared<dielectric>(color(1, .8, .9), 1.5);
 
     auto mesh = obj("renderthis.obj", material2);
-    bvh_node mesh_node = bvh_node(mesh);
-    world.add(make_shared<bvh_node>(mesh_node));
+    world.add(mesh);
     
 
     return world;

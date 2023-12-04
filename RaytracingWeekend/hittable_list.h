@@ -11,15 +11,15 @@ public:
 	hittable_list(shared_ptr<hittable> object) : objects{} { add(object); }
 	hittable_list(std::vector<shared_ptr<hittable>>::iterator begin, size_t n) : objects({}) { std::copy_n(begin, n, std::back_inserter(objects)); }
 
-	void clear() {
-		objects.clear();
-	}
+	auto begin() { return objects.begin(); }
+	auto end() { return objects.end(); }
 	void add(shared_ptr<hittable> object) { objects.push_back(object); }
-	
+	void add(hittable_list& list) { std::copy(list.begin(), list.end(), std::back_inserter(objects)); }
+
 	virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
 	virtual bool bounding_box(aabb& output_box) const override;
 
-public:
+protected:
 	std::vector<shared_ptr<hittable>> objects;
 };
 

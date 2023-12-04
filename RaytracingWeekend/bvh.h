@@ -15,7 +15,7 @@ public:
     bvh_node(std::vector<shared_ptr<hittable>>::iterator, std::vector<shared_ptr<hittable>>::iterator);
 
     bvh_node(hittable_list& list)
-        : bvh_node(list.objects.begin(), list.objects.end())
+        : bvh_node(list.begin(), list.end())
     {}
 
     virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;

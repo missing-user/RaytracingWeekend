@@ -67,6 +67,6 @@ hittable_list obj(std::string filename, std::shared_ptr<material> mat) {
                 mat));
         }
     }
-    std::cerr << "Loaded Mesh with "<< my_tris.objects.size() << " triangles and " << vertexIndices.size()<< " vertecies" << std::endl;
+    std::cerr << "Loaded "<<filename<<" with "<< normalIndices.size() << " normals and " << vertexIndices.size()<< " vertecies" << std::endl;
     return my_tris;
 }

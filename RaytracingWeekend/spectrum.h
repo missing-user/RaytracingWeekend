@@ -779,6 +779,25 @@ color XYZToRGB(const color& xyz) {
     return rgb;
 }
 
+color debug_rainbow(double input) {
+    // input is in [0, 1]
+    // output is a color in the rainbow
+    // 0 is red, 1 is violet
+    double r = 0.0;
+    double g = 0.0;
+    double b = 0.0;
+
+    if (input < 0.5) {
+        r = 1.0 - 2.0 * input;
+        g = 2.0 * input;
+    }
+    else {
+        g = 1.0 - 2.0 * (input - 0.5);
+        b = 2.0 * (input - 0.5);
+    }
+
+    return vec3(r, g, b);
+}
 
 color lambda_to_xyz(double wavelength) {
     size_t index = static_cast<unsigned int>(wavelength) - lambda_start;
