@@ -96,6 +96,18 @@ Reference image of 3 spheres made from different materials
 
 What happens if we apply a cross product instead of a dot product to the normals?
 
+![](Image_Outputs/bvh_traversal_cost.png)
+
+Debug view showing the BVH traversal cost, when splitting on the longest axis. Red is expensive, blue is cheap.
+
+#### Adaptive sampling comparison
+![](Image_Outputs/sameTimeAdaptive.png)
+![](Image_Outputs/1000adaptive.png)
+![](Image_Outputs/samplecounts200.png)
+
+These three images show the effect of adaptive sampling. The first image is rendered with a constant number of samples per pixel and the second with adaptive sampling. Although the second image has the same total numer of samples as the first one, it has less visible noise (especially on the diffuse areas around the light and in shadows). The third image (black and white) shows which areas were sampled more often. The adaptive sampling algorithm estimates the variance of each pixel at runtime and decides whether to continue sampling or not.
+
+
 ### Performance
 1. Multithreading support
 2. Different sampling strategies
@@ -108,3 +120,4 @@ What happens if we apply a cross product instead of a dot product to the normals
 ## TODO:
 - Better BVH splitting using surface area heuristics
 - Sobol sampling everything for faster convergence
+- Importance sampling
