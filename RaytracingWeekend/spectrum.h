@@ -786,6 +786,7 @@ color debug_rainbow(double input) {
     double r = 0.0;
     double g = 0.0;
     double b = 0.0;
+    input = std::clamp(input, 0.0, 1.0);
 
     if (input < 0.5) {
         r = 1.0 - 2.0 * input;

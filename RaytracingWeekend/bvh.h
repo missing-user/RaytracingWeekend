@@ -21,9 +21,11 @@ public:
     virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
 
     virtual bool bounding_box(aabb& output_box) const override;
+private:
     void split_sah(std::vector<shared_ptr<hittable>>::iterator start, std::vector<shared_ptr<hittable>>::iterator end, int dim);
+    void split_sa(std::vector<shared_ptr<hittable>>::iterator start, std::vector<shared_ptr<hittable>>::iterator end, int dim);
+    void split_max(std::vector<shared_ptr<hittable>>::iterator start, std::vector<shared_ptr<hittable>>::iterator end, int dim);
 
-public:
     shared_ptr<hittable> left;
     shared_ptr<hittable> right;
     aabb box;
@@ -35,6 +37,7 @@ bool bvh_node::bounding_box(aabb& output_box) const {
 }
 
 bool bvh_node::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
+    rec.traversal_cost++;
     if (!box.hit(r, t_min, t_max))
         return false;
 
@@ -79,6 +82,64 @@ bool box_y_compare(const shared_ptr<hittable>& a, const shared_ptr<hittable>& b)
 
 bool box_z_compare(const shared_ptr<hittable>& a, const shared_ptr<hittable>& b) {
     return box_compare(a, b, 2);
+}
+
+void bvh_node::split_sa(const std::vector<shared_ptr<hittable>>::iterator start, const std::vector<shared_ptr<hittable>>::iterator end, int dim) {
+    auto comparator = (dim == 0) ? box_x_compare
+            : (dim == 1) ? box_y_compare
+            : box_z_compare;
+
+    size_t object_span = end - start;
+    std::sort(start, end, comparator);
+
+    std::vector<double> surface_area_left(object_span);
+    double half_sa = 0;
+    for(auto it = start; it < end; it++){
+        aabb objbox;
+        (*it)->bounding_box(objbox);
+        auto sa = objbox.surface_area();
+        half_sa += sa;
+        surface_area_left[it-start] = half_sa;
+    }
+    half_sa /= 2.0;
+
+    auto midd = std::upper_bound(surface_area_left.begin(), surface_area_left.end(), half_sa);
+    if (midd == surface_area_left.begin()) {
+        midd++;
+    }
+    if (midd == surface_area_left.end()) {
+        midd--;
+    }
+    //std::copy(surface_area_left.begin(), surface_area_left.end(), std::ostream_iterator<double>(std::cout, " "));
+
+    std::cout << "Split at " << std::distance(surface_area_left.begin(), midd) << " of " << object_span << "\n";
+    auto mid = start + std::distance(surface_area_left.begin(), midd);
+    
+    if (object_span <= 4) {
+        left = make_shared<hittable_list>(start, mid - start);
+        right = make_shared<hittable_list>(mid, end - mid);
+    }else{
+        left = make_shared<bvh_node>(start, mid);
+        right = make_shared<bvh_node>(mid, end);
+    }
+}
+
+void bvh_node::split_max(const std::vector<shared_ptr<hittable>>::iterator start, const std::vector<shared_ptr<hittable>>::iterator end, int dim) {
+    auto comparator = (dim == 0) ? box_x_compare
+            : (dim == 1) ? box_y_compare
+            : box_z_compare;
+
+    size_t object_span = end - start;
+    auto mid = start + object_span / 2;
+    std::partial_sort(start, mid, end, comparator);
+
+    if (object_span <= 4) {
+        left = make_shared<hittable_list>(start, mid - start);
+        right = make_shared<hittable_list>(mid, end - mid);
+    }else{
+        left = make_shared<bvh_node>(start, mid);
+        right = make_shared<bvh_node>(mid, end);
+    }
 }
 
 void bvh_node::split_sah(const std::vector<shared_ptr<hittable>>::iterator start, const std::vector<shared_ptr<hittable>>::iterator end, int dim) {
@@ -226,7 +287,7 @@ bvh_node::bvh_node(std::vector<shared_ptr<hittable>>::iterator start, std::vecto
         axis = random_int(0, 2);
     }
 
-    split_sah(start, end, axis);
+    split_max(start, end, axis);
 
     aabb box_left, box_right;
     if (!left->bounding_box(box_left)
